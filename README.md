@@ -3,6 +3,9 @@
 Web-app die elke dag de tv-gids van het Telenet-basisaanbod ophaalt (97 zenders, regio
 Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 
+- **Onboarding**: bij de eerste keer 6 vragen (talen, soort programma's, verhalen, shows, onderwerpen,
+  sport; telkens meerdere antwoorden mogelijk). Daarna zie je meteen je profiel, met voorgestelde
+  favoriete zenders en hoeveel tips je er vanavond mee krijgt. Je kan de vragen later opnieuw doen.
 - **Vanavond**: tips op maat volgens je interesses, trefwoorden en favoriete zenders, plus wat er nu op je zenders loopt.
 - **Gids**: tijdrooster per dag, filter op zendergroep of favorieten.
 - **Zenders**: het volledige dagprogramma van één zender.

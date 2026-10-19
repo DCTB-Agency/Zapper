@@ -71,10 +71,13 @@ def is_film(p):
 def thema_match(p, thema):
     if thema["id"] == "film":
         return is_film(p)
-    return any(re.search(thema["genres"], g, re.I) for g in p.get("g", []))
+    genres = p.get("g", [])
+    if not any(re.search(thema["genres"], g, re.I) for g in genres):
+        return False
+    return not thema.get("ook") or any(re.search(thema["ook"], g, re.I) for g in genres)
 
 
-def score(p, profiel, themas, zender_n):
+def score(p, profiel, themas, zender_n, zender_taal):
     s, reden = 0, []
     duur = p["e"] - p["b"]
     gekozen = [t for t in themas if t["id"] in (profiel.get("themas") or [])]
@@ -103,12 +106,16 @@ def score(p, profiel, themas, zender_n):
         s -= 30
     if re.search(r"nieuws|journaal|het weer|news|météo|meteo", p["t"], re.I) and "nieuws" not in (profiel.get("themas") or []):
         s -= 25
+    talen = profiel.get("talen") or []
+    if talen and zender_taal.get(p["c"], "nl") not in talen:
+        s -= 40
     return s, reden
 
 
 def melding_voor(profiel, kijklijst, progs, themas, zenders, nu):
     zender_naam = {z["id"]: z["naam"] for z in zenders}
     zender_n = {z["id"]: z["n"] for z in zenders}
+    zender_taal = {z["id"]: z.get("taal", "nl") for z in zenders}
     def is_avond(ts):
         uur = dt.datetime.fromtimestamp(ts, TZ).hour
         return uur >= 17 or uur < 2
@@ -131,7 +138,7 @@ def melding_voor(profiel, kijklijst, progs, themas, zenders, nu):
         for p in avond:
             if (p["c"], p["b"]) in gezien:
                 continue
-            s, _ = score(p, profiel, themas, zender_n)
+            s, _ = score(p, profiel, themas, zender_n, zender_taal)
             if s >= 20:
                 kand.append((s, p))
         kand.sort(key=lambda x: -x[0])

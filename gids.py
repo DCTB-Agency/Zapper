@@ -71,6 +71,24 @@ def details(event_id):
     }
 
 
+TAAL_UITZONDERING = {"france24": "fr", "bbcfirst": "nl", "horse": "en"}
+
+
+def zender_taal(n, zid):
+    """Taal die je nodig hebt om de zender te volgen (Vlaamse zenders ondertitelen in het Nederlands)."""
+    if zid in TAAL_UITZONDERING:
+        return TAAL_UITZONDERING[zid]
+    if n < 120 or 200 <= n < 400:
+        return "nl"   # Vlaams, NPO, sport, docu
+    if n < 130 or n >= 400:
+        return "en"   # BBC en internationale nieuwszenders
+    if n < 170:
+        return "fr"
+    if n < 180:
+        return "de"
+    return "andere"   # Rai, TVE, TRT, TVP, Mediaset, 2M, ...
+
+
 def tv_dag(ts):
     """Een tv-dag loopt van 06u tot 06u."""
     return (dt.datetime.fromtimestamp(ts, TZ) - dt.timedelta(hours=6)).date()
@@ -158,7 +176,8 @@ def vernieuw(stad, dagen):
         "dagen": sorted(per_dag),
         "zenders": [
             {"id": c["id"], "n": c.get("logicalChannelNumber"), "naam": c["name"],
-             "logo": c.get("logo", {}).get("focused", "")}
+             "logo": c.get("logo", {}).get("focused", ""),
+             "taal": zender_taal(c.get("logicalChannelNumber") or 999, c["id"])}
             for c in kanalen
         ],
     }

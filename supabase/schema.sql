@@ -13,6 +13,9 @@ create table if not exists public.profielen (
   tips_in_melding boolean not null default true, -- ook tips op basis van interesses
   bijgewerkt   timestamptz not null default now()
 );
+-- Toegevoegd met de onboarding (ook voor databases die al bestonden):
+alter table public.profielen add column if not exists talen text[] not null default '{}';  -- nl, en, fr, de, andere
+alter table public.profielen add column if not exists onboarding_klaar boolean not null default false;
 
 -- Kijklijst: een specifieke uitzending (soort 'uitzending') of een hele reeks
 -- volgen op titel (soort 'reeks'), zodat elke nieuwe uitzending meetelt.

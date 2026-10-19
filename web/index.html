@@ -53,6 +53,26 @@
   <div id="demoBalk" class="demobalk" hidden>Demo-modus: je voorkeuren worden alleen in deze browser bewaard. Vul <code>config.js</code> in om met accounts te werken.</div>
 
   <main class="inhoud">
+    <!-- Onboarding -->
+    <section id="v-welkom" class="view" hidden>
+      <div class="ob">
+        <div class="ob-kop">
+          <span class="eyebrow" id="obStap">Vraag 1 van 6</span>
+          <button class="tekstknop" id="obLater" type="button">Later instellen</button>
+        </div>
+        <div class="ob-balk" aria-hidden="true"><i id="obVoortgang"></i></div>
+        <div class="ob-tekst">
+          <h1 id="obVraag"></h1>
+          <p id="obUitleg"></p>
+        </div>
+        <div id="obInhoud"></div>
+        <div class="ob-acties">
+          <button class="knop stil" id="obTerug" type="button">Terug</button>
+          <button class="knop" id="obVolgende" type="button">Volgende</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Vanavond -->
     <section id="v-vanavond" class="view">
       <div class="hero">
@@ -68,7 +88,7 @@
           <h2>Maak de gids van jou</h2>
           <p>Kies waar je graag naar kijkt en je favoriete zenders. Dan krijg je hier elke avond tips op maat, en een melding op je gsm.</p>
         </div>
-        <a href="#profiel" class="knop">Interesses kiezen</a>
+        <a href="#welkom" class="knop">Beantwoord 6 vragen</a>
       </div>
 
       <div class="blok" id="blokKijk" hidden>
@@ -147,8 +167,13 @@
         </div>
 
         <div class="blok">
-          <div class="blok-kop"><h2>Waar kijk je graag naar?</h2><p>Kies zoveel als je wil.</p></div>
-          <div class="pillen groot" id="pThemas"></div>
+          <div class="blok-kop"><h2>Talen</h2><p>Programma's in andere talen krijg je niet als tip.</p></div>
+          <div class="pillen groot" id="pTalen"></div>
+        </div>
+
+        <div class="blok">
+          <div class="blok-kop"><h2>Waar kijk je graag naar?</h2><a href="#welkom" class="link">Vragenlijst opnieuw doen</a></div>
+          <div id="pThemas" class="themagroepen"></div>
         </div>
 
         <div class="blok">

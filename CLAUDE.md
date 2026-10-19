@@ -23,7 +23,12 @@ meldingen via web-push vanuit de PWA.
   (in Actions bewaard met `actions/cache`). `web/data/` staat in `.gitignore`: de data wordt in de workflow gebouwd.
 - `web/`: statische app zonder build-stap. `app.js` (vanilla JS), `style.css`, `index.html`, `sw.js`
   (push + offline), `manifest.webmanifest`, `config.js` (publieke Supabase-URL/anon key/VAPID public key),
-  `themas.json` (interessethema's → regex op Telenet-genres; gedeeld met `melding.py`).
+  `themas.json` (interessethema's → regex op Telenet-genres, met optioneel `ook` = tweede genre dat ook
+  moet voorkomen, en `groep` = de onboardingvraag; gedeeld met `melding.py`).
+  Onboarding (`#welkom`, blok "Onboarding" in `app.js`): 6 vragen → `profielen.talen` + `profielen.themas`
+  + voorgestelde favorieten. Start vanzelf zolang `onboarding_klaar` false is en er geen interesses zijn.
+  Elke zender heeft in `index.json` een `taal` (nl/en/fr/de/andere, zie `zender_taal()` in `gids.py`);
+  programma's op zenders buiten `profiel.talen` krijgen −40 in de score.
   Zonder `SUPABASE_URL` draait de app in **demo-modus** (`LokaleOpslag`, localStorage).
 - `supabase/schema.sql`: tabellen `profielen`, `kijklijst` (soort `uitzending` of `reeks`),
   `push_abonnementen`, `meldingen_log`; RLS op alles; RPC `registreer_toestel`.
@@ -52,7 +57,7 @@ Na wijzigingen aan bestanden in `web/`: verhoog `VERSIE` in `web/sw.js`, anders 
 
 ## Status (19 oktober 2026)
 
-Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): Vanavond met tips, Gids-rooster, Zenders,
+Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (6 vragen + samenvatting), Vanavond met tips, Gids-rooster, Zenders,
 Zoeken (dagen, uren, zenders, thema's, typfouten), Kijklijst (uitzending + reeks volgen), Profiel,
 detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 
@@ -64,7 +69,8 @@ detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 ## Volgende stappen
 
 1. Repo op GitHub zetten (publiek), Pages-bron op "GitHub Actions".
-2. De gebruiker begeleiden door de Supabase-setup (README stap 2-4). Accounts aanmaken doet de gebruiker zelf.
+2. De gebruiker begeleiden door de Supabase-setup (README stap 2-4). `schema.sql` bevat ook de
+   kolommen `talen` en `onboarding_klaar`; op een bestaande database kan het script gewoon opnieuw. Accounts aanmaken doet de gebruiker zelf.
 3. `python3 maak_vapid.py` lokaal laten draaien; `web/config.js` invullen; secrets/variables zetten.
 4. End-to-end testen: inloggen via magic link, voorkeuren bewaren, meldingen aanzetten op Android en iPhone,
    `meldingen.yml` met `droog` en daarna echt.
