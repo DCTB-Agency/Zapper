@@ -1,0 +1,48 @@
+name: Gids vernieuwen en publiceren
+
+on:
+  schedule:
+    - cron: "15 3 * * *"    # elke nacht (05:15 zomertijd, 04:15 wintertijd)
+    - cron: "15 13 * * *"   # en in de namiddag, voor last-minute wijzigingen
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  bouw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Detailcache herstellen
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: details-${{ github.run_id }}
+          restore-keys: details-
+      - name: Gids ophalen
+        run: python3 gids.py --stad "${{ vars.TELENET_STAD || '20001' }}"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+  publiceer:
+    needs: bouw
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

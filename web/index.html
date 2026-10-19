@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="nl-BE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Telenet Avondgids</title>
+<meta name="description" content="Wat er vanavond op tv is, met je eigen tips, kijklijst en meldingen.">
+<meta name="theme-color" content="#0d1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Avondgids">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Inloggen -->
+<main id="login" class="login" hidden>
+  <div class="login-kaart">
+    <img src="icoon-192.png" alt="" width="64" height="64">
+    <h1>Avond<span>gids</span></h1>
+    <p>Log in met je e-mailadres. Je krijgt een link om in te loggen, zonder wachtwoord.</p>
+    <form id="loginForm">
+      <label for="loginMail">E-mailadres</label>
+      <input id="loginMail" type="email" autocomplete="email" required placeholder="naam@voorbeeld.be">
+      <button type="submit" class="knop">Stuur mij een inloglink</button>
+    </form>
+    <p id="loginMelding" class="klein" role="status"></p>
+  </div>
+</main>
+
+<!-- App -->
+<div id="app" hidden>
+  <header class="kop">
+    <div class="kop-in">
+      <a href="#vanavond" class="merk">Avond<span>gids</span></a>
+      <nav class="tabs" id="tabs" aria-label="Onderdelen">
+        <a href="#vanavond" data-tab="vanavond">Vanavond</a>
+        <a href="#gids" data-tab="gids">Gids</a>
+        <a href="#zenders" data-tab="zenders">Zenders</a>
+        <a href="#zoeken" data-tab="zoeken">Zoeken</a>
+        <a href="#kijklijst" data-tab="kijklijst">Kijklijst</a>
+      </nav>
+      <a href="#profiel" class="profielknop" id="profielKnop" aria-label="Mijn voorkeuren"><span id="initiaal">?</span></a>
+    </div>
+  </header>
+
+  <div id="demoBalk" class="demobalk" hidden>Demo-modus: je voorkeuren worden alleen in deze browser bewaard. Vul <code>config.js</code> in om met accounts te werken.</div>
+
+  <main class="inhoud">
+    <!-- Vanavond -->
+    <section id="v-vanavond" class="view">
+      <div class="hero">
+        <div>
+          <div class="eyebrow" id="heroDag"></div>
+          <h1 id="heroTitel">Vanavond op tv</h1>
+        </div>
+        <div class="klok"><b id="klok">--:--</b><span id="regioTxt"></span></div>
+      </div>
+
+      <div id="setupKaart" class="setup" hidden>
+        <div>
+          <h2>Maak de gids van jou</h2>
+          <p>Kies waar je graag naar kijkt en je favoriete zenders. Dan krijg je hier elke avond tips op maat, en een melding op je gsm.</p>
+        </div>
+        <a href="#profiel" class="knop">Interesses kiezen</a>
+      </div>
+
+      <div class="blok" id="blokKijk" hidden>
+        <div class="blok-kop"><h2>Op je kijklijst vanavond</h2></div>
+        <div class="kaarten" id="kijkVanavond"></div>
+      </div>
+
+      <div class="blok">
+        <div class="blok-kop"><h2 id="tipsTitel">Voor jou vanavond</h2><p id="tipsUitleg"></p></div>
+        <div class="kaarten" id="tips"></div>
+      </div>
+
+      <div class="blok">
+        <div class="blok-kop"><h2>Nu op je zenders</h2><a href="#gids" class="link">Hele gids</a></div>
+        <div class="lijst" id="nuLijst"></div>
+      </div>
+    </section>
+
+    <!-- Gids (rooster) -->
+    <section id="v-gids" class="view" hidden>
+      <div class="balk">
+        <div class="dagen" id="gidsDagen" role="group" aria-label="Dag"></div>
+      </div>
+      <div class="balk">
+        <div class="pillen" id="groepen" role="group" aria-label="Zendergroep"></div>
+        <div class="balk-rechts">
+          <label class="vh" for="gidsVan">Vanaf</label>
+          <select id="gidsVan"></select>
+        </div>
+      </div>
+      <div id="rooster" class="rooster" tabindex="0" aria-label="Tv-rooster"><div id="raster" class="raster"></div></div>
+    </section>
+
+    <!-- Zenders -->
+    <section id="v-zenders" class="view" hidden>
+      <div class="zender-layout">
+        <aside class="zenderkiezer">
+          <label class="vh" for="zenderFilter">Zoek een zender</label>
+          <input id="zenderFilter" type="search" placeholder="Zoek een zender">
+          <div id="zenderLijst" class="zenderlijst"></div>
+        </aside>
+        <div class="zender-detail" id="zenderDetail"></div>
+      </div>
+    </section>
+
+    <!-- Zoeken -->
+    <section id="v-zoeken" class="view" hidden>
+      <form id="zoekForm" class="zoekbalk" role="search">
+        <label class="vh" for="zoekInput">Zoeken</label>
+        <input id="zoekInput" type="search" autocomplete="off" placeholder="Bv. thuis, film morgen na 21u, voetbal vtm, de verraders">
+      </form>
+      <div class="zoekhulp" id="zoekHulp"></div>
+      <div id="zoekBegrip" class="begrip"></div>
+      <div id="zoekResultaten" class="resultaten"></div>
+    </section>
+
+    <!-- Kijklijst -->
+    <section id="v-kijklijst" class="view" hidden>
+      <div class="blok">
+        <div class="blok-kop"><h2>Gevolgde reeksen</h2><p>Elke uitzending van deze titels komt vanzelf op je kijklijst.</p></div>
+        <div id="reeksen" class="reeksen"></div>
+      </div>
+      <div class="blok">
+        <div class="blok-kop"><h2>Binnenkort</h2></div>
+        <div id="kijkLijst" class="resultaten"></div>
+      </div>
+    </section>
+
+    <!-- Profiel -->
+    <section id="v-profiel" class="view" hidden>
+      <div class="profiel">
+        <div class="blok">
+          <div class="blok-kop"><h2>Jij</h2><p id="profielMail"></p></div>
+          <label for="pNaam">Naam</label>
+          <input id="pNaam" type="text" autocomplete="given-name" placeholder="Je voornaam">
+        </div>
+
+        <div class="blok">
+          <div class="blok-kop"><h2>Waar kijk je graag naar?</h2><p>Kies zoveel als je wil.</p></div>
+          <div class="pillen groot" id="pThemas"></div>
+        </div>
+
+        <div class="blok">
+          <div class="blok-kop"><h2>Trefwoorden</h2><p>Titels, personen of onderwerpen. Bv. <i>thuis</i>, <i>formule 1</i>, <i>Staf Coppens</i>.</p></div>
+          <form id="pWoordForm" class="woordform">
+            <label class="vh" for="pWoord">Trefwoord toevoegen</label>
+            <input id="pWoord" type="text" placeholder="Trefwoord toevoegen">
+            <button class="knop klein">Toevoegen</button>
+          </form>
+          <div class="pillen" id="pWoorden"></div>
+        </div>
+
+        <div class="blok">
+          <div class="blok-kop"><h2>Favoriete zenders</h2><p>Tik op een zender. Je favorieten staan bovenaan in de gids.</p></div>
+          <div class="favraster" id="pFavs"></div>
+        </div>
+
+        <div class="blok">
+          <div class="blok-kop"><h2>Meldingen</h2></div>
+          <div class="instel">
+            <label class="schakel"><input type="checkbox" id="pMeldAan"> <span>Stuur me elke dag wat er vanavond op tv is</span></label>
+            <label class="schakel"><input type="checkbox" id="pMeldTips"> <span>Ook tips volgens mijn interesses, niet alleen mijn kijklijst</span></label>
+            <div class="instelrij"><label for="pMeldUur">Om</label><select id="pMeldUur"></select></div>
+          </div>
+          <div class="toestel">
+            <p id="pushStatus">Meldingen op dit toestel: onbekend</p>
+            <button class="knop" id="pushKnop" type="button">Meldingen aanzetten op dit toestel</button>
+            <p class="klein" id="pushUitleg"></p>
+          </div>
+        </div>
+
+        <div class="blok acties">
+          <span class="klein" id="bewaarStatus" role="status"></span>
+          <button class="knop stil" id="uitloggen" type="button">Uitloggen</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="onderbalk" id="onderbalk" aria-label="Onderdelen">
+    <a href="#vanavond" data-tab="vanavond"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.5A8 8 0 0 1 8.5 4a8 8 0 1 0 11.5 11.5Z"/></svg>Vanavond</a>
+    <a href="#gids" data-tab="gids"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18M9 3v18"/></svg>Gids</a>
+    <a href="#zenders" data-tab="zenders"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="m9 2 3 4 3-4"/></svg>Zenders</a>
+    <a href="#zoeken" data-tab="zoeken"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Zoeken</a>
+    <a href="#kijklijst" data-tab="kijklijst"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>Kijklijst</a>
+  </nav>
+</div>
+
+<dialog id="detail"><div id="detailIn" class="detail"></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

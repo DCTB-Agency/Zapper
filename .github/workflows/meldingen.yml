@@ -1,0 +1,30 @@
+name: Dagelijkse meldingen
+
+on:
+  schedule:
+    # elk uur van 14u tot 21u Belgische tijd (UTC-tijden; GitHub start soms wat later)
+    - cron: "0 12-20 * * *"
+  workflow_dispatch:
+    inputs:
+      droog:
+        description: "Alleen tonen, niets versturen"
+        type: boolean
+        default: true
+
+jobs:
+  meld:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Meldingen versturen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: python3 melding.py ${{ inputs.droog && '--droog' || '' }}
