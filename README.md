@@ -25,6 +25,9 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   (*vanavond, morgen, vrijdag, weekend*), uren (*na 21u, voor 20u, om 20u30*), zenders (*op canvas, vtm*),
   soorten (*film, live, nieuw, voetbal, misdaad…*) en verdraagt typfouten (*verader* → *De Verraders*).
 - **Kijklijst**: bewaar een uitzending, of maak er een favoriet programma van zodat elke uitzending vanzelf meetelt.
+- **Agenda**: zet een uitzending in de agenda van je gsm (bestand voor iPhone, Android en Outlook, of
+  rechtstreeks in Google Agenda), met een herinnering 10 minuten voor de start. Op de kijklijst zet
+  **Alles in mijn agenda** al je komende uitzendingen er in één keer in.
 - **Meldingen**: elke dag op een uur naar keuze een pushmelding op Android of iPhone met wat er
   vanavond op je kijklijst staat, aangevuld met tips.
 - **Gebruikers**: meerdere mensen loggen in met een link via e-mail. Alleen wie uitgenodigd is, kan erin.
@@ -118,6 +121,28 @@ De eerste keer duurt hij ongeveer 4 minuten, daarna ongeveer 1 minuut.
 
 Testen: **Actions → Dagelijkse meldingen → Run workflow**. Met *droog* aangevinkt zie je in het logboek
 wat iedereen zou krijgen, zonder iets te versturen. Zonder vinkje wordt het echt verstuurd.
+
+## Onderhoud: hoe vaak moet dit bijgewerkt worden?
+
+Eens Zapper online staat, werkt hij zelfstandig. Er is geen handmatige update nodig.
+
+| Wat | Wanneer | Door |
+|---|---|---|
+| Tv-gids ophalen (8 dagen vooruit) | elke dag rond 05u en 15u | workflow *Gids vernieuwen en publiceren* |
+| Dagelijkse meldingen | elk uur van 14u tot 21u | workflow *Dagelijkse meldingen* |
+| Geplande workflows actief houden | bij elke geplande gidsrun | job *levend-houden* in `gids.yml` |
+
+Waar je wel op moet letten:
+
+- **Telenet wijzigt zijn website.** De gids komt uit de Telenet TV-webapp, niet uit een officiële API. Als het ophalen
+  mislukt, mailt GitHub je dat de workflow faalde. Dan moet `gids.py` aangepast worden. De app blijft intussen de
+  laatst opgehaalde gids tonen.
+- **GitHub pauzeert geplande workflows** in een publieke repo na 60 dagen zonder commits. De job *levend-houden*
+  zet ze bij elke run opnieuw aan. Staat er bij **Actions** toch een gele melding "workflow disabled", klik dan op
+  **Enable workflow**.
+- **Supabase pauzeert gratis projecten** na een week zonder gebruik. De meldingen-workflow gebruikt de database elke
+  dag, dus dat gebeurt niet zolang die draait.
+- **Pushmeldingen** van een toestel dat de app verwijderd heeft, worden automatisch opgeruimd.
 
 ## Goed om te weten
 

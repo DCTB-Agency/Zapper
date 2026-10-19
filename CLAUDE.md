@@ -70,14 +70,15 @@ Na wijzigingen aan bestanden in `web/`: verhoog `VERSIE` in `web/sw.js`, anders 
 
 ## Status (19 oktober 2026)
 
-Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (8 vragen met Geen voorkeur, favoriete programma's zoeken, voorkeurzenders in volgorde + samenvatting), programma's toevoegen op de Kijklijst, lerend profiel en Niet voor mij, zoekveld op Vanavond, Vanavond met tips, Gids-rooster, Zenders,
+Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (8 vragen met Geen voorkeur, favoriete programma's zoeken, voorkeurzenders in volgorde + samenvatting), programma's toevoegen op de Kijklijst, agenda-export (.ics + Google Agenda, ook de hele kijklijst), lerend profiel en Niet voor mij, zoekveld op Vanavond, Vanavond met tips, Gids-rooster, Zenders,
 Zoeken (dagen, uren, zenders, thema's, typfouten), Kijklijst (uitzending + reeks volgen), Profiel,
 detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 
 **Nog niet getest**, want daar was nog geen account voor:
 - Supabase-login, opslag en RLS (`SupaOpslag` in `app.js`, `schema.sql`).
 - Echte web-push: abonneren op een toestel, `melding.py` die verstuurt, iOS als beginscherm-app.
-- De GitHub Actions-workflows (`gids.yml`, `meldingen.yml`).
+- De GitHub Actions-workflows (`gids.yml`, `meldingen.yml`), ook de job `levend-houden`.
+- De .ics-export op een echte iPhone en Android (vooral vanuit de beginscherm-app op iOS).
 
 ## Volgende stappen
 
@@ -87,5 +88,5 @@ detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 3. `python3 maak_vapid.py` lokaal laten draaien; `web/config.js` invullen; secrets/variables zetten.
 4. End-to-end testen: inloggen via magic link, voorkeuren bewaren, meldingen aanzetten op Android en iPhone,
    `meldingen.yml` met `droog` en daarna echt.
-5. Mogelijke uitbreidingen: herinnering vlak voor de start van een kijklijst-uitzending (vraagt een vaker
-   draaiende planner dan GitHub cron), details ook overdag ophalen, gedeelde lijsten tussen gebruikers.
+5. Mogelijke uitbreidingen: een abonneerbare agenda-feed (webcal) per gebruiker die vanzelf bijwerkt
+   (nu is het een eenmalige .ics-export of Google Agenda-link, met herinnering 10 min vooraf), details ook overdag ophalen, gedeelde lijsten tussen gebruikers.

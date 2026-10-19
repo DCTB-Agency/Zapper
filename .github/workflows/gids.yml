@@ -12,6 +12,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write   # voor het levend houden van de geplande workflows
 
 concurrency:
   group: pages
@@ -46,3 +47,16 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+  levend-houden:
+    # GitHub zet geplande workflows in een publieke repo stil na 60 dagen zonder commits.
+    # Ze opnieuw "enable" maken zet die teller terug, zonder commits te maken.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Geplande workflows actief houden
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in gids.yml meldingen.yml; do
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable" || true
+          done

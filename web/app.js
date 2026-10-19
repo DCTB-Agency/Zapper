@@ -600,13 +600,14 @@ async function tekenSnelZoek() {
 }
 
 /* ---------- Kijklijst ---------- */
+const komendeKijklijst = () => alleProgs().filter(p => p.e > nu() && opKijklijst(p)).sort((a, b) => a.b - b.b);
 async function tekenKijklijst() {
   const rs = S.kijk.filter(k => k.soort === "reeks");
   $("#reeksen").innerHTML = rs.map(k => `<button class="pil" data-ontvolg="${esc(k.titel)}" aria-label="${esc(k.titel)} uit favorieten">${esc(k.titel)} <span class="x">×</span></button>`).join("")
     || `<p class="klein">Nog geen favoriete programma's. Zoek er hierboven een, of open een programma en tik op <b>☆ Favoriet programma</b>.</p>`;
   if (!G.alles) { $("#kijkLijst").innerHTML = `<p class="leeg">Laden…</p>`; await laadAlles(); G.alles = true; }
-  const t0 = nu();
-  const ps = alleProgs().filter(p => p.e > t0 && opKijklijst(p)).sort((a, b) => a.b - b.b);
+  const ps = komendeKijklijst();
+  $("#agendaAlles").hidden = !ps.length;
   const perDag = {};
   for (const p of ps) (perDag[tvDag(p.b)] ||= []).push(p);
   $("#kijkLijst").innerHTML = Object.keys(perDag).sort().map(d => `<div class="dagkop">${esc(dagNaam(d, true))}</div>` + perDag[d].map(p => item(p)).join("")).join("")
@@ -700,6 +701,45 @@ async function pushKnop() {
   pushStatus();
 }
 
+/* ---------- Agenda ----------
+   Een .ics-bestand opent op iPhone, Android en in Outlook als "toevoegen aan agenda".
+   Elke afspraak krijgt een herinnering 10 minuten voor de start. */
+const icsTijd = ts => new Date(ts * 1000).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const icsTekst = t => String(t ?? "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+function icsVouw(regel) { // regels van max. 75 tekens, vervolg begint met een spatie
+  const uit = []; let r = regel;
+  while (r.length > 74) { uit.push(r.slice(0, 74)); r = " " + r.slice(74); }
+  uit.push(r); return uit.join("\r\n");
+}
+function agendaTekst(p) {
+  const z = G.zMap[p.c];
+  return [p.s, p.d, `${z?.naam} · kanaal ${z?.n} · Telenet`, "Via Zapper"].filter(Boolean).join("\n\n");
+}
+function maakIcs(progs) {
+  const r = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//DCTB Agency//Zapper//NL", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  for (const p of progs) {
+    const z = G.zMap[p.c];
+    r.push("BEGIN:VEVENT", `UID:${p.c}-${p.b}@zapper`, `DTSTAMP:${icsTijd(nu())}`, `DTSTART:${icsTijd(p.b)}`, `DTEND:${icsTijd(p.e)}`,
+      `SUMMARY:${icsTekst(`${p.t} (${z?.naam})`)}`, `LOCATION:${icsTekst(`${z?.naam}, kanaal ${z?.n}`)}`, `DESCRIPTION:${icsTekst(agendaTekst(p))}`,
+      "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsTekst(`${p.t} begint zo op ${z?.naam}`)}`, "TRIGGER:-PT10M", "END:VALARM", "END:VEVENT");
+  }
+  r.push("END:VCALENDAR");
+  return r.map(icsVouw).join("\r\n") + "\r\n";
+}
+function bewaarIcs(progs, naam) {
+  const blob = new Blob([maakIcs(progs)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: `${naam.replace(/[^\w\- ]+/g, "").trim() || "zapper"}.ics` });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  toast(progs.length > 1 ? `${progs.length} programma's klaar voor je agenda` : "Open het bestand om het aan je agenda toe te voegen");
+}
+function googleAgenda(p) {
+  const z = G.zMap[p.c];
+  const q = new URLSearchParams({ action: "TEMPLATE", text: `${p.t} (${z?.naam})`, dates: `${icsTijd(p.b)}/${icsTijd(p.e)}`, details: agendaTekst(p), location: `${z?.naam}, kanaal ${z?.n}` });
+  return `https://calendar.google.com/calendar/render?${q}`;
+}
+
 /* ---------- Detailvenster ---------- */
 function toonDetail(k) {
   const p = vind(k); if (!p) return;
@@ -724,6 +764,9 @@ function toonDetail(k) {
       <button class="knop stil" data-zender="${z.id}" data-dag="${tvDag(p.b)}">Meer op ${esc(z.naam)}</button>
       <button class="knop stil" data-nee="${sleutel(p)}">Niet voor mij</button>
     </div>
+    ${p.e > nu() ? `<div class="agendaknoppen"><span class="klein">In je agenda, met herinnering 10 min vooraf:</span>
+      <button class="knop lijn klein" data-agenda="${sleutel(p)}">In mijn agenda</button>
+      <a class="knop lijn klein" href="${esc(googleAgenda(p))}" target="_blank" rel="noopener">Google Agenda</a></div>` : ""}
     ${ook.length ? `<div class="ookop">Ook te zien: ${ook.map(x => `<button data-p="${sleutel(x)}">${esc(dagNaam(tvDag(x.b)))} ${tijd(x.b)} op ${esc(G.zMap[x.c]?.naam)}</button>`).join(" · ")}</div>` : ""}`;
   if (!$("#detail").open) $("#detail").showModal();
   $("#detail").dataset.k = k;
@@ -1085,9 +1128,11 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.agenda) { const p = vind(d.agenda); if (p) bewaarIcs([p], p.t); return; }
+    if (d.agendaalles !== undefined) { const l = komendeKijklijst(); if (l.length) bewaarIcs(l, "Zapper kijklijst"); else toast("Je kijklijst is leeg"); return; }
     if (d.nee) { e.stopPropagation(); const p = vind(d.nee); if (p) { $("#detail").close(); nietVoorMij(p); } return; }
     if (d.vergeet !== undefined) { S.profiel.geleerd = {}; bewaarProfiel(); toast("De gids is vergeten wat hij over je leerde"); return tekenProfiel(); }
     if (d.allezoek !== undefined) { S.zoek = $("#snelZoek").value; location.hash = "zoeken"; return; }
