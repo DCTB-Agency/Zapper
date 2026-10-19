@@ -6,9 +6,13 @@ Made by [DCTB Agency](https://www.dctb.be).
 Zapper is een web-app die elke dag de tv-gids van het Telenet-basisaanbod ophaalt (97 zenders, regio
 Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 
-- **Onboarding**: bij de eerste keer 7 vragen (talen, soort programma's, verhalen, shows, onderwerpen,
-  sport en je voorkeurzenders in volgorde; telkens meerdere antwoorden mogelijk). Daarna zie je meteen
-  je profiel en hoeveel tips je er vanavond mee krijgt. Je kan de vragen later opnieuw doen.
+- **Onboarding**: bij de eerste keer 8 vragen (talen, soort programma's, verhalen, shows, onderwerpen,
+  sport, favoriete programma's en je voorkeurzenders in volgorde). Telkens meerdere antwoorden mogelijk,
+  of **Geen voorkeur**. Daarna zie je meteen je profiel en hoeveel tips je er vanavond mee krijgt.
+  Je kan de vragen later opnieuw doen.
+- **Favoriete programma's**: zoek op naam (typfouten mogen) en voeg toe, in de onboarding of op je
+  kijklijst. Elke uitzending komt vanzelf op je kijklijst en in je melding, ook van titels die pas later
+  op tv komen.
 - **Voorkeurzenders in volgorde**: tips komen eerst van je nummer 1, dan nummer 2, enzovoort, en worden
   daarna aangevuld met andere zenders. Een tip moet wel bij je interesses passen.
 - **Lerend profiel**: wat je bewaart, als reeks volgt of opent, telt mee voor je volgende tips (per genre en
@@ -20,7 +24,7 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 - **Zoeken**: slim zoeken, volledig in de browser (geen betalende AI-dienst). Begrijpt dagen
   (*vanavond, morgen, vrijdag, weekend*), uren (*na 21u, voor 20u, om 20u30*), zenders (*op canvas, vtm*),
   soorten (*film, live, nieuw, voetbal, misdaad…*) en verdraagt typfouten (*verader* → *De Verraders*).
-- **Kijklijst**: bewaar een uitzending, of volg een hele reeks zodat elke uitzending vanzelf meetelt.
+- **Kijklijst**: bewaar een uitzending, of maak er een favoriet programma van zodat elke uitzending vanzelf meetelt.
 - **Meldingen**: elke dag op een uur naar keuze een pushmelding op Android of iPhone met wat er
   vanavond op je kijklijst staat, aangevuld met tips.
 - **Gebruikers**: meerdere mensen loggen in met een link via e-mail. Alleen wie uitgenodigd is, kan erin.

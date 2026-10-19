@@ -96,7 +96,7 @@
           <h2>Maak de gids van jou</h2>
           <p>Kies waar je graag naar kijkt en je favoriete zenders. Dan krijg je hier elke avond tips op maat, en een melding op je gsm.</p>
         </div>
-        <a href="#welkom" class="knop">Beantwoord 7 vragen</a>
+        <a href="#welkom" class="knop">Beantwoord een paar vragen</a>
       </div>
 
       <div class="blok" id="blokKijk" hidden>
@@ -156,7 +156,12 @@
     <!-- Kijklijst -->
     <section id="v-kijklijst" class="view" hidden>
       <div class="blok">
-        <div class="blok-kop"><h2>Gevolgde reeksen</h2><p>Elke uitzending van deze titels komt vanzelf op je kijklijst.</p></div>
+        <div class="blok-kop"><h2>Favoriete programma's</h2><p>Elke uitzending van deze titels komt vanzelf op je kijklijst en in je melding.</p></div>
+        <div class="progzoek">
+          <label class="vh" for="kProgZoek">Programma toevoegen</label>
+          <input id="kProgZoek" type="search" autocomplete="off" placeholder="Programma toevoegen: zoek op naam">
+          <div id="kProgSug" class="suggesties"></div>
+        </div>
         <div id="reeksen" class="reeksen"></div>
       </div>
       <div class="blok">

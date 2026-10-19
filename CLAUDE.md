@@ -25,7 +25,10 @@ meldingen via web-push vanuit de PWA.
   (push + offline), `manifest.webmanifest`, `config.js` (publieke Supabase-URL/anon key/VAPID public key),
   `themas.json` (interessethema's → regex op Telenet-genres, met optioneel `ook` = tweede genre dat ook
   moet voorkomen, en `groep` = de onboardingvraag; gedeeld met `melding.py`).
-  Onboarding (`#welkom`, blok "Onboarding" in `app.js`): 6 vragen → `profielen.talen` + `profielen.themas`
+  Onboarding (`#welkom`, blok "Onboarding" in `app.js`): 8 vragen, elk met "Geen voorkeur" (`S.ob.geen`, sluit
+  de andere keuzes uit; leeg = telt niet mee). Vraag "programmas" zoekt titels (`zoekTitels()`, ook gebruikt op de
+  Kijklijst) en bewaart ze als kijklijst-rijen met soort `reeks` (in de UI "favoriete programma's").
+  Eerder: 6 vragen → `profielen.talen` + `profielen.themas`
   + voorgestelde favorieten. Start vanzelf zolang `onboarding_klaar` false is en er geen interesses zijn.
   Elke zender heeft in `index.json` een `taal` (nl/en/fr/de/andere, zie `zender_taal()` in `gids.py`);
   programma's op zenders buiten `profiel.talen` krijgen −40 in de score.
@@ -67,7 +70,7 @@ Na wijzigingen aan bestanden in `web/`: verhoog `VERSIE` in `web/sw.js`, anders 
 
 ## Status (19 oktober 2026)
 
-Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (7 vragen incl. voorkeurzenders in volgorde + samenvatting), lerend profiel en Niet voor mij, zoekveld op Vanavond, Vanavond met tips, Gids-rooster, Zenders,
+Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (8 vragen met Geen voorkeur, favoriete programma's zoeken, voorkeurzenders in volgorde + samenvatting), programma's toevoegen op de Kijklijst, lerend profiel en Niet voor mij, zoekveld op Vanavond, Vanavond met tips, Gids-rooster, Zenders,
 Zoeken (dagen, uren, zenders, thema's, typfouten), Kijklijst (uitzending + reeks volgen), Profiel,
 detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 
