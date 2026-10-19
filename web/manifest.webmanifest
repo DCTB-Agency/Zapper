@@ -1,6 +1,6 @@
 {
-  "name": "Telenet Avondgids",
-  "short_name": "Avondgids",
+  "name": "Zapper",
+  "short_name": "Zapper",
   "description": "Wat er vanavond op tv is, met je eigen tips, kijklijst en meldingen.",
   "lang": "nl-BE",
   "start_url": "./#vanavond",

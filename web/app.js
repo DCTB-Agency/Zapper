@@ -1,5 +1,5 @@
 "use strict";
-/* Telenet Avondgids: web-app.
+/* Zapper: persoonlijke tv-gids voor het Telenet-basisaanbod.
    Gegevens: web/data/*.json (dagelijks gemaakt door gids.py).
    Gebruikers en voorkeuren: Supabase, of localStorage in demo-modus. */
 
@@ -660,7 +660,7 @@ async function pushStatus() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
     if (isIos && !isStandalone) {
       st.textContent = "Op iPhone werken meldingen alleen vanuit de app op je beginscherm.";
-      uitleg.innerHTML = "Tik in Safari op <b>Deel</b> en kies <b>Zet op beginscherm</b>. Open de Avondgids daarna via het nieuwe icoon en kom hier terug.";
+      uitleg.innerHTML = "Tik in Safari op <b>Deel</b> en kies <b>Zet op beginscherm</b>. Open Zapper daarna via het nieuwe icoon en kom hier terug.";
     } else st.textContent = "Deze browser ondersteunt geen pushmeldingen.";
     knop.hidden = true; return;
   }
@@ -681,12 +681,12 @@ async function pushKnop() {
   try {
     const reg = await navigator.serviceWorker.ready;
     if (knop.dataset.actie === "test") {
-      await reg.showNotification("Avondgids werkt", { body: "Zo ziet je dagelijkse melding eruit.", icon: "icoon-192.png", tag: "test" });
+      await reg.showNotification("Zapper werkt", { body: "Zo ziet je dagelijkse melding eruit.", icon: "icoon-192.png", tag: "test" });
     } else {
       const toestemming = await Notification.requestPermission();
       if (toestemming !== "granted") throw new Error("Je gaf geen toestemming voor meldingen.");
       if (OP.demo) {
-        await reg.showNotification("Avondgids werkt", { body: "In demo-modus zie je alleen deze testmelding.", icon: "icoon-192.png", tag: "test" });
+        await reg.showNotification("Zapper werkt", { body: "In demo-modus zie je alleen deze testmelding.", icon: "icoon-192.png", tag: "test" });
         throw new Error("Demo-modus: dagelijkse meldingen werken pas met een account (config.js invullen).");
       }
       if (!CFG.VAPID_PUBLIC_KEY) throw new Error("De meldingssleutel ontbreekt in config.js. Vraag de beheerder om VAPID_PUBLIC_KEY in te vullen.");

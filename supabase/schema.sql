@@ -1,4 +1,4 @@
--- Telenet Avondgids: database-schema voor Supabase.
+-- Zapper: database-schema voor Supabase.
 -- Plak dit in Supabase > SQL Editor en klik Run. Je kan het veilig opnieuw uitvoeren.
 
 -- Eén profiel per gebruiker: favorieten, interesses en meldingsvoorkeuren.

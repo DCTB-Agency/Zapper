@@ -1,6 +1,9 @@
-# Telenet Avondgids
+# Zapper
 
-Web-app die elke dag de tv-gids van het Telenet-basisaanbod ophaalt (97 zenders, regio
+Made by [DCTB Agency](https://www.dctb.be).
+
+
+Zapper is een web-app die elke dag de tv-gids van het Telenet-basisaanbod ophaalt (97 zenders, regio
 Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 
 - **Onboarding**: bij de eerste keer 7 vragen (talen, soort programma's, verhalen, shows, onderwerpen,

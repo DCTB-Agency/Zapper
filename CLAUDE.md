@@ -1,6 +1,6 @@
-# Telenet Avondgids: context voor Claude
+# Zapper: context voor Claude
 
-Persoonlijke tv-gids als web-app (PWA) voor een kleine groep familie/vrienden. Taal van de app,
+**Zapper** (made by DCTB Agency, www.dctb.be; die vermelding staat in de footer en op het loginscherm) is een persoonlijke tv-gids als web-app (PWA) voor een kleine groep familie/vrienden. Taal van de app,
 de code-identifiers en de commits: **Nederlands (Vlaams)**. Houd dat aan.
 
 ## Wat de gebruiker wil (oorspronkelijke vraag)

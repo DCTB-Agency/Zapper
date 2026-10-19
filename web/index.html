@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Telenet Avondgids</title>
+<title>Zapper</title>
 <meta name="description" content="Wat er vanavond op tv is, met je eigen tips, kijklijst en meldingen.">
 <meta name="theme-color" content="#0d1020">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Avondgids">
+<meta name="apple-mobile-web-app-title" content="Zapper">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -23,7 +23,7 @@
 <main id="login" class="login" hidden>
   <div class="login-kaart">
     <img src="icoon-192.png" alt="" width="64" height="64">
-    <h1>Avond<span>gids</span></h1>
+    <h1>Zap<span>per</span></h1>
     <p>Log in met je e-mailadres. Je krijgt een link om in te loggen, zonder wachtwoord.</p>
     <form id="loginForm">
       <label for="loginMail">E-mailadres</label>
@@ -31,6 +31,7 @@
       <button type="submit" class="knop">Stuur mij een inloglink</button>
     </form>
     <p id="loginMelding" class="klein" role="status"></p>
+    <p class="legal">Made by <a href="https://www.dctb.be" target="_blank" rel="noopener">DCTB Agency</a></p>
   </div>
 </main>
 
@@ -38,7 +39,7 @@
 <div id="app" hidden>
   <header class="kop">
     <div class="kop-in">
-      <a href="#vanavond" class="merk">Avond<span>gids</span></a>
+      <a href="#vanavond" class="merk">Zap<span>per</span></a>
       <nav class="tabs" id="tabs" aria-label="Onderdelen">
         <a href="#vanavond" data-tab="vanavond">Vanavond</a>
         <a href="#gids" data-tab="gids">Gids</a>
@@ -223,6 +224,8 @@
         </div>
       </div>
     </section>
+
+    <footer class="legal">Zapper · Made by <a href="https://www.dctb.be" target="_blank" rel="noopener">DCTB Agency</a></footer>
   </main>
 
   <nav class="onderbalk" id="onderbalk" aria-label="Onderdelen">

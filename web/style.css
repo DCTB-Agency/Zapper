@@ -1,4 +1,4 @@
-/* Avondgids. Concept: de avond als tijdlijn, inktblauw met een amberkleurige "prime time"-gloed.
+/* Zapper. Concept: de avond als tijdlijn, inktblauw met een amberkleurige "prime time"-gloed.
    Smalle display-letter voor titels en tijden, rustige sans voor tekst, mono voor zendernummers en uren. */
 :root {
   --bg: #f2f3f8;
@@ -365,3 +365,9 @@ body.ob-modus .inhoud { padding-bottom: 24px !important; }
 .snelzoek { position: relative; }
 .snelzoek svg { position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
 .snelzoek input { font-size: 17px; padding: 13px 16px 13px 44px; border-radius: 12px; }
+
+/* Legal */
+.legal { font-size: 12px; color: var(--muted); text-align: center; padding-top: 32px; margin: 0; }
+.legal a { color: var(--muted); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.legal a:hover { color: var(--accent); }
+body.ob-modus .inhoud > .legal { display: none; }

@@ -1,5 +1,5 @@
 // Service worker: toont pushmeldingen en houdt de app-schil offline beschikbaar.
-const VERSIE = "tvgids-v3";
+const VERSIE = "tvgids-v4";
 const SCHIL = ["./", "index.html", "app.js", "style.css", "config.js", "themas.json", "icoon-192.png", "manifest.webmanifest"];
 
 self.addEventListener("install", e => {
@@ -24,7 +24,7 @@ self.addEventListener("fetch", e => {
 self.addEventListener("push", e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(d.title || "Vanavond op tv", {
+  e.waitUntil(self.registration.showNotification(d.title || "Zapper", {
     body: d.body || "",
     icon: "icoon-192.png",
     badge: "icoon-192.png",
