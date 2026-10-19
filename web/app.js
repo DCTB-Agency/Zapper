@@ -285,7 +285,7 @@ function item(p, { metDag = false, markeer = null, voortgang = false, volgende =
       <span class="m">${metDag ? esc(dagNaam(tvDag(p.b))) + " · " : ""}${tijd(p.b)}–${tijd(p.e)} · ${esc(z?.naam)}</span>
       <span class="t">${t}</span>
       ${voortgang ? `<span class="balkje"><i style="width:${pct}%"></i></span>` : ""}
-      ${volgende ? `<span class="m">daarna ${tijd(volgende.b)} ${esc(volgende.t)}</span>` : (p.s ? `<span class="m">${esc(p.s)}</span>` : "")}
+      ${volgende ? `<span class="s">Daarna ${tijd(volgende.b)} ${esc(volgende.t)}</span>` : (p.s ? `<span class="s">${esc(p.s)}</span>` : "")}
     </span>
     <button class="ster${kijk ? " aan" : ""}" data-kijk="${sleutel(p)}" aria-pressed="${!!kijk}" aria-label="${kijk ? "Van kijklijst halen" : "Op kijklijst zetten"}">${BOEK}</button>
   </div>`;
@@ -633,7 +633,9 @@ function tekenProfiel() {
   $("#pThemas").innerHTML = groepen.map(g => `<div><h3>${esc(g)}</h3><div class="pillen groot">${G.themas.filter(t => t.groep === g).map(t =>
     `<button class="pil" data-thema="${t.id}" aria-pressed="${p.themas.includes(t.id)}">${esc(t.naam)}</button>`).join("")}</div></div>`).join("");
   $("#pWoorden").innerHTML = p.trefwoorden.map(w => `<button class="pil" data-woordweg="${esc(w)}" aria-label="${esc(w)} verwijderen">${esc(w)} <span class="x">×</span></button>`).join("") || `<span class="klein">Nog geen trefwoorden.</span>`;
-  const favEerst = [...p.favorieten.map(id => G.zMap[id]).filter(Boolean), ...G.index.zenders.filter(z => !p.favorieten.includes(z.id))];
+  const andere = G.index.zenders.filter(z => !p.favorieten.includes(z.id) && (S.alleZendersProfiel || !p.talen.length || p.talen.includes(z.taal)));
+  const favEerst = [...p.favorieten.map(id => G.zMap[id]).filter(Boolean), ...(S.alleZendersProfiel ? andere : andere.slice(0, 12))];
+  $("#pFavsMeer").textContent = S.alleZendersProfiel ? "Minder zenders tonen" : `Toon alle ${G.index.zenders.length} zenders`;
   $("#pFavs").innerHTML = favEerst.map(z => { const r = p.favorieten.indexOf(z.id);
     return `<button class="zendertegel" data-favknop="${z.id}" aria-pressed="${r >= 0}" title="${esc(z.naam)}"><span class="rang">${r >= 0 ? r + 1 : ""}</span>${logo(z, true)}<span class="nm">${esc(z.naam)}</span></button>`; }).join("");
   const L = p.geleerd || {};
@@ -1128,9 +1130,10 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.meerzend !== undefined) { S.alleZendersProfiel = !S.alleZendersProfiel; return tekenProfiel(); }
     if (d.agenda) { const p = vind(d.agenda); if (p) bewaarIcs([p], p.t); return; }
     if (d.agendaalles !== undefined) { const l = komendeKijklijst(); if (l.length) bewaarIcs(l, "Zapper kijklijst"); else toast("Je kijklijst is leeg"); return; }
     if (d.nee) { e.stopPropagation(); const p = vind(d.nee); if (p) { $("#detail").close(); nietVoorMij(p); } return; }

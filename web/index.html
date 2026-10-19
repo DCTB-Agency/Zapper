@@ -120,8 +120,8 @@
       <div class="balk">
         <div class="dagen" id="gidsDagen" role="group" aria-label="Dag"></div>
       </div>
-      <div class="balk">
-        <div class="pillen" id="groepen" role="group" aria-label="Zendergroep"></div>
+      <div class="balk filters">
+        <div class="scrolrij" id="groepen" role="group" aria-label="Zendergroep"></div>
         <div class="balk-rechts">
           <label class="vh" for="gidsVan">Vanaf</label>
           <select id="gidsVan"></select>
@@ -146,9 +146,10 @@
     <section id="v-zoeken" class="view" hidden>
       <form id="zoekForm" class="zoekbalk" role="search">
         <label class="vh" for="zoekInput">Zoeken</label>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <input id="zoekInput" type="search" autocomplete="off" placeholder="Bv. thuis, film morgen na 21u, voetbal vtm, de verraders">
       </form>
-      <div class="zoekhulp" id="zoekHulp"></div>
+      <div class="scrolrij" id="zoekHulp" aria-label="Voorbeelden"></div>
       <div id="zoekBegrip" class="begrip"></div>
       <div id="zoekResultaten" class="resultaten"></div>
     </section>
@@ -201,7 +202,8 @@
 
         <div class="blok">
           <div class="blok-kop"><h2>Voorkeurzenders</h2><p>Het nummer is je volgorde: tips komen eerst van nummer 1. Tik om te verwijderen; opnieuw tikken zet een zender achteraan.</p></div>
-          <div class="favraster" id="pFavs"></div>
+          <div class="zendertegels" id="pFavs"></div>
+          <button class="tekstknop" id="pFavsMeer" data-meerzend type="button">Toon alle zenders</button>
         </div>
 
         <div class="blok">

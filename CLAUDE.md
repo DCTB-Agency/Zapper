@@ -49,6 +49,17 @@ meldingen via web-push vanuit de PWA.
   zodra `melding_uur` bereikt is. Gebruikt de service_role-sleutel en `pywebpush`.
   **De scorefunctie staat dubbel**: `score()` in `web/app.js` en `score()` in `melding.py`. Pas ze samen aan.
 
+## Ontwerp (web/style.css)
+
+- **Mobile first**: de basisregels zijn voor de gsm; `@media (min-width: 720px)` voegt tabs, rasters en
+  twee kolommen toe, `1080px` alleen een grotere titel. Schrijf nieuwe stijl eerst voor de gsm.
+- **Vaste schaal** (bovenaan het bestand): afstanden `--s1..--s6`, afrondingen `--r-s/m/l`, tekst `--t-xs..--t-2xl`.
+  Gebruik geen losse pixelwaarden.
+- **Tikvlakken** minstens `--tik` (44px); invoervelden 16px tekst (anders zoomt iOS in).
+- Alle klikbare vlakken (`.kaart .item .tegel .zendertegel .sug .zknop .tl`) delen één basisregel; gekozen = accentrand + `--accent-soft`.
+- Hover alleen binnen `@media (hover: hover)`. Kleine kopjes in hoofdletters gebruiken één gedeelde stijl (`.eyebrow` e.a.).
+- Detail = paneel van onder op gsm, gecentreerd venster vanaf 720px.
+
 ## Telenet-API (onofficieel, uit de Telenet TV-webapp)
 
 Basis: `https://spark-prod-be.gnp.cloud.telenet.tv/eng/web`
