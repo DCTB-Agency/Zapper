@@ -83,12 +83,19 @@
         <div class="klok"><b id="klok">--:--</b><span id="regioTxt"></span></div>
       </div>
 
+      <form id="snelForm" class="snelzoek" role="search">
+        <label class="vh" for="snelZoek">Zoek een programma</label>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="snelZoek" type="search" autocomplete="off" placeholder="Zoek een programma: thuis, film morgen, voetbal live…">
+      </form>
+      <div id="snelResultaten" class="blok" hidden></div>
+
       <div id="setupKaart" class="setup" hidden>
         <div>
           <h2>Maak de gids van jou</h2>
           <p>Kies waar je graag naar kijkt en je favoriete zenders. Dan krijg je hier elke avond tips op maat, en een melding op je gsm.</p>
         </div>
-        <a href="#welkom" class="knop">Beantwoord 6 vragen</a>
+        <a href="#welkom" class="knop">Beantwoord 7 vragen</a>
       </div>
 
       <div class="blok" id="blokKijk" hidden>
@@ -187,8 +194,13 @@
         </div>
 
         <div class="blok">
-          <div class="blok-kop"><h2>Favoriete zenders</h2><p>Tik op een zender. Je favorieten staan bovenaan in de gids.</p></div>
+          <div class="blok-kop"><h2>Voorkeurzenders</h2><p>Het nummer is je volgorde: tips komen eerst van nummer 1. Tik om te verwijderen; opnieuw tikken zet een zender achteraan.</p></div>
           <div class="favraster" id="pFavs"></div>
+        </div>
+
+        <div class="blok">
+          <div class="blok-kop"><h2>Wat de gids over je leerde</h2></div>
+          <div id="pGeleerd" class="themagroepen"></div>
         </div>
 
         <div class="blok">

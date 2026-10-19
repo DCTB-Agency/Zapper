@@ -36,7 +36,8 @@ def log(*a):
 
 def norm(s):
     s = unicodedata.normalize("NFD", str(s or "").lower())
-    return re.sub(r"\s+", " ", "".join(c for c in s if unicodedata.category(c) != "Mn")).strip()
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+&' ]+", " ", s)).strip()  # zelfde als norm() in app.js
 
 
 def lees_json(naam):
@@ -94,8 +95,16 @@ def score(p, profiel, themas, zender_n, zender_taal):
             s += 40; reden.append(f"'{w}'")
         elif w in rest:
             s += 15; reden.append(f"'{w}'")
-    if p["c"] in (profiel.get("favorieten") or []):
-        s += 8
+    favs = profiel.get("favorieten") or []
+    if p["c"] in favs:
+        s += max(6, 14 - 2 * favs.index(p["c"]))  # eerste voorkeurzender weegt het zwaarst
+    geleerd = profiel.get("geleerd") or {}
+    if norm(p["t"]) in (geleerd.get("nee") or []):
+        s -= 100
+    lg = sum((geleerd.get("g") or {}).get(g, 0) for g in p.get("g", []))
+    lc = (geleerd.get("c") or {}).get(p["c"], 0)
+    geleerd_bonus = max(-15, min(20, lg)) + max(-6, min(8, lc))
+    s += geleerd_bonus
     if p.get("p"):
         s += 6
     if p.get("l"):
@@ -109,7 +118,8 @@ def score(p, profiel, themas, zender_n, zender_taal):
     talen = profiel.get("talen") or []
     if talen and zender_taal.get(p["c"], "nl") not in talen:
         s -= 40
-    return s, reden
+    relevant = bool(reden) or geleerd_bonus >= 5  # past bij je interesses of bij wat je bewaarde
+    return s, reden, relevant
 
 
 def melding_voor(profiel, kijklijst, progs, themas, zenders, nu):
@@ -138,15 +148,19 @@ def melding_voor(profiel, kijklijst, progs, themas, zenders, nu):
         for p in avond:
             if (p["c"], p["b"]) in gezien:
                 continue
-            s, _ = score(p, profiel, themas, zender_n, zender_taal)
-            if s >= 20:
+            s, _, relevant = score(p, profiel, themas, zender_n, zender_taal)
+            if s >= 20 and relevant:
                 kand.append((s, p))
         kand.sort(key=lambda x: -x[0])
-        titels = set()
-        for s, p in kand:
-            if norm(p["t"]) in titels:
+        # eerst de voorkeurzenders in volgorde, daarna aanvullen met andere zenders
+        favs = profiel.get("favorieten") or []
+        volgorde = [x for f in favs for x in kand if x[1]["c"] == f] + kand
+        titels, per_zender = set(), {}
+        for s, p in volgorde:
+            if norm(p["t"]) in titels or per_zender.get(p["c"], 0) >= 2:
                 continue
             titels.add(norm(p["t"]))
+            per_zender[p["c"]] = per_zender.get(p["c"], 0) + 1
             regels.append((p, "tip"))
             if sum(1 for _, w in regels if w == "tip") >= 3:
                 break

@@ -63,7 +63,7 @@ function vind(k) {
 }
 
 /* ---------- Opslag ---------- */
-const STANDAARD = { naam: "", favorieten: [], themas: [], trefwoorden: [], talen: [], melding_aan: true, melding_uur: 17, tips_in_melding: true, onboarding_klaar: false };
+const STANDAARD = { naam: "", favorieten: [], themas: [], trefwoorden: [], talen: [], melding_aan: true, melding_uur: 17, tips_in_melding: true, onboarding_klaar: false, geleerd: {} };
 
 class LokaleOpslag {
   constructor() { this.demo = true; this.email = "demo"; }
@@ -132,6 +132,7 @@ async function wisselUitzending(p) {
   try {
     if (bestaand) { await OP.verwijder(bestaand.id); S.kijk = S.kijk.filter(k => k !== bestaand); toast("Van je kijklijst gehaald"); }
     else { S.kijk.push(await OP.voegToe({ soort: "uitzending", titel: p.t, zender: p.c, start: p.b, einde: p.e })); toast("Op je kijklijst gezet"); }
+    leer(p, bestaand ? -1 : 3);
   } catch (e) { toast("Bewaren lukte niet: " + e.message); }
   herteken();
 }
@@ -140,6 +141,8 @@ async function wisselReeks(titel) {
   try {
     if (bestaand) { await OP.verwijder(bestaand.id); S.kijk = S.kijk.filter(k => k !== bestaand); toast(`Je volgt ${titel} niet meer`); }
     else { S.kijk.push(await OP.voegToe({ soort: "reeks", titel })); toast(`Je volgt nu ${titel}`); }
+    const voorbeeld = alleProgs().find(x => norm(x.t) === norm(titel) && x.g.length) || alleProgs().find(x => norm(x.t) === norm(titel));
+    if (voorbeeld) leer(voorbeeld, bestaand ? -2 : 4);
   } catch (e) { toast("Bewaren lukte niet: " + e.message); }
   herteken();
 }
@@ -165,16 +168,47 @@ function score(p) {
     if (titel.includes(w)) { s += 40; reden.push(`“${w}”`); }
     else if (rest.includes(w)) { s += 15; reden.push(`“${w}”`); }
   }
-  if (pr.favorieten.includes(p.c)) s += 8;
+  const rang = pr.favorieten.indexOf(p.c);
+  if (rang >= 0) s += Math.max(6, 14 - 2 * rang); // eerste voorkeurzender weegt het zwaarst
+  const L = pr.geleerd || {};
+  if (L.nee?.includes(norm(p.t))) s -= 100;
+  const lg = Math.max(-15, Math.min(20, p.g.reduce((t, g) => t + (L.g?.[g] || 0), 0)));
+  const lc = Math.max(-6, Math.min(8, L.c?.[p.c] || 0));
+  s += lg + lc;
+  const geleerd = lg + lc >= 5;
   if (p.p) s += 6;
   if (p.l) s += 5;
   if ((G.zMap[p.c]?.n ?? 999) <= 30) s += 3;
   if (p.e - p.b < 20 * 60) s -= 30;
   if (isNieuws(p) && !pr.themas.includes("nieuws")) s -= 25;
   if (!taalOk(p)) s -= 40;
-  return { s, reden };
+  return { s, reden, geleerd };
 }
-const heeftInteresses = () => S.profiel.themas.length > 0 || S.profiel.trefwoorden.length > 0;
+const heeftInteresses = () => S.profiel.themas.length > 0 || S.profiel.trefwoorden.length > 0 || (S.profiel.geleerd?.n || 0) >= 3;
+
+/* ---------- Lerend profiel ----------
+   Bewaren (+3), een reeks volgen (+4), een programma openen (+0,5) en "Niet voor mij" (−1,5 en de titel verdwijnt uit je tips) verschuiven
+   gewichten per genre en per zender. Oudere signalen wegen bij elke nieuwe stap iets minder. */
+const geopend = new Set();
+function leer(p, w) {
+  const L = S.profiel.geleerd = { g: {}, c: {}, nee: [], n: 0, ...(S.profiel.geleerd || {}) };
+  for (const soort of ["g", "c"]) for (const k of Object.keys(L[soort])) {
+    L[soort][k] = Math.round(L[soort][k] * 0.97 * 100) / 100;
+    if (Math.abs(L[soort][k]) < 0.2) delete L[soort][k];
+  }
+  for (const g of p.g) L.g[g] = Math.max(-10, Math.min(15, (L.g[g] || 0) + w));
+  L.c[p.c] = Math.max(-6, Math.min(8, (L.c[p.c] || 0) + w / 2));
+  L.n = (L.n || 0) + 1;
+  bewaarProfiel();
+}
+function nietVoorMij(p) {
+  leer(p, -1.5); // de titel zelf wordt hieronder geweerd; het genre maar licht
+  const L = S.profiel.geleerd;
+  L.nee = [...new Set([norm(p.t), ...(L.nee || [])])].slice(0, 150);
+  bewaarProfiel();
+  toast(`Je krijgt ${p.t} niet meer als tip`);
+  herteken();
+}
 
 /* Algemene tips als er nog geen interesses zijn: nieuwe afleveringen, films en live op de grote zenders. */
 function algemeneScore(p) {
@@ -192,17 +226,19 @@ function tipsVoor(iso, van, tot, max = 9) {
   const ps = (G.dagen[iso] || []).filter(p => p.b >= van && p.b <= tot && p.e > nu());
   const persoonlijk = heeftInteresses();
   const kand = ps.map(p => {
-    if (persoonlijk) { const r = score(p); return { p, s: r.s, reden: r.reden }; }
+    if (persoonlijk) { const r = score(p); return { p, s: r.s, reden: r.reden, geleerd: r.geleerd }; }
     return { p, s: algemeneScore(p), reden: [] };
-  }).filter(x => x.s >= (persoonlijk ? 20 : 30) && !opKijklijst(x.p));
+  }).filter(x => x.s >= (persoonlijk ? 20 : 30) && (!persoonlijk || x.reden.length || x.geleerd) && !opKijklijst(x.p));
   kand.sort((a, b) => b.s - a.s || a.p.b - b.p.b);
   const titels = new Set(), perZender = {}, uit = [];
-  for (const x of kand) {
+  const neem = x => {
     const t = norm(x.p.t);
-    if (titels.has(t) || (perZender[x.p.c] || 0) >= 2) continue;
+    if (uit.length >= max || titels.has(t) || (perZender[x.p.c] || 0) >= 2) return;
     titels.add(t); perZender[x.p.c] = (perZender[x.p.c] || 0) + 1; uit.push(x);
-    if (uit.length >= max) break;
-  }
+  };
+  // Eerst de voorkeurzenders, in de volgorde die je koos; daarna aanvullen met andere zenders.
+  for (const id of S.profiel.favorieten) for (const x of kand) if (x.p.c === id) neem(x);
+  for (const x of kand) neem(x);
   return uit.sort((a, b) => a.p.b - b.p.b);
 }
 
@@ -222,15 +258,22 @@ function chips(p) {
 const BOEK = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>`;
 const STER = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.2 9.5l6.1-.9Z"/></svg>`;
 
-function kaart(p, reden = []) {
+function kaart(p, reden = [], { geleerd = false, nee = false } = {}) {
   const z = G.zMap[p.c];
-  return `<button class="kaart" data-p="${sleutel(p)}">
+  const rang = S.profiel.favorieten.indexOf(p.c);
+  const waarom = [
+    reden.length ? `Omdat je houdt van <b>${esc(reden.slice(0, 2).join(", "))}</b>` : "",
+    geleerd ? "Lijkt op wat je bewaarde" : "",
+    rang >= 0 && rang < 5 ? `Voorkeurzender ${rang + 1}` : ""
+  ].filter(Boolean).join(" · ");
+  return `<div class="kaart" role="button" tabindex="0" data-p="${sleutel(p)}">
+    ${nee ? `<button class="nee" data-nee="${sleutel(p)}" aria-label="Niet voor mij" title="Niet voor mij">×</button>` : ""}
     <span class="wanneer"><strong>${tijd(p.b)}</strong>${logo(z, true)}<span class="zn">${esc(z?.naam)}</span></span>
     <span class="titel">${esc(p.t)}</span>
     ${chips(p)}
     <span class="sub">${esc(p.d || p.s || p.g.join(", "))}</span>
-    ${reden.length ? `<span class="reden">Omdat je houdt van <b>${esc(reden.slice(0, 2).join(", "))}</b></span>` : ""}
-  </button>`;
+    ${waarom ? `<span class="reden">${waarom}</span>` : ""}
+  </div>`;
 }
 function item(p, { metDag = false, markeer = null, voortgang = false, volgende = null } = {}) {
   const z = G.zMap[p.c];
@@ -269,7 +312,7 @@ async function tekenVanavond() {
   const tips = tipsVoor(iso, Math.max(lokaal(iso, 18), nu() - 600), lokaal(iso, 23, 30));
   $("#tipsTitel").textContent = heeftInteresses() ? "Voor jou vanavond" : "Tips voor vanavond";
   $("#tipsUitleg").textContent = heeftInteresses() ? "Volgens je interesses en favoriete zenders" : "Nieuwe afleveringen, films en live uitzendingen";
-  $("#tips").innerHTML = tips.map(x => kaart(x.p, x.reden)).join("") || `<p class="leeg">Geen tips meer voor vanavond. Kijk eens in de <a href="#gids">gids</a> of <a href="#zoeken">zoek</a> naar iets voor morgen.</p>`;
+  $("#tips").innerHTML = tips.map(x => kaart(x.p, x.reden, { geleerd: x.geleerd, nee: true })).join("") || `<p class="leeg">Geen tips meer voor vanavond. Kijk eens in de <a href="#gids">gids</a> of <a href="#zoeken">zoek</a> naar iets voor morgen.</p>`;
 
   const favs = S.profiel.favorieten.length ? S.profiel.favorieten : G.index.zenders.filter(z => z.n <= 12).map(z => z.id);
   const t = nu();
@@ -278,6 +321,7 @@ async function tekenVanavond() {
     const i = lijst.findIndex(p => p.b <= t && p.e > t);
     return i >= 0 ? { p: lijst[i], v: lijst[i + 1] } : null;
   }).filter(Boolean);
+  if ($("#snelZoek").value.trim()) tekenSnelZoek();
   $("#nuLijst").innerHTML = nuOp.map(x => item(x.p, { voortgang: true, volgende: x.v })).join("") || `<p class="leeg">Geen programma's gevonden voor dit moment.</p>`;
 }
 
@@ -495,6 +539,9 @@ function zoek(q) {
     if (zin.length > 3 && norm(p.t).includes(zin)) s += 20;
     if (norm(p.t) === zin) s += 15;
     if (opKijklijst(p)) s += 3;
+    const rang = S.profiel.favorieten.indexOf(p.c);
+    if (rang >= 0) s += Math.max(1, 4 - rang / 2); // voorkeurzenders iets hoger
+    if (!taalOk(p)) s *= 0.6;                      // andere talen lager, niet weg
     return s;
   };
   let res = ps.map(p => ({ p, s: scoor(p, f.termen.length) })).filter(x => x.s > 0);
@@ -537,6 +584,21 @@ async function tekenZoeken() {
   ).join("");
 }
 
+/* Zoeken op het overzicht: de beste treffers meteen onder het zoekveld. */
+async function tekenSnelZoek() {
+  const q = $("#snelZoek").value.trim(), el = $("#snelResultaten");
+  if (!q) { el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  if (!G.alles) { el.innerHTML = `<p class="klein">De gids van de komende dagen wordt geladen…</p>`; await laadAlles(); G.alles = true; }
+  if ($("#snelZoek").value.trim() !== q) return; // intussen verder getypt
+  const { f, res, bijna } = zoek(q);
+  const m = markeerder(f);
+  const aantal = res.length === 120 ? "120+" : res.length;
+  el.innerHTML = `<div class="blok-kop"><h2>Gevonden</h2>${res.length > 6 ? `<button class="tekstknop" data-allezoek type="button">Alle ${aantal} resultaten</button>` : ""}</div>
+    ${f.labels.length || bijna ? `<div class="begrip">${f.labels.map(l => `<span class="chip">${esc(l)}</span>`).join(" ")}${bijna ? " geen exacte treffer, dit lijkt er het meest op" : ""}</div>` : ""}
+    <div class="resultaten">${res.slice(0, 6).map(x => item(x.p, { metDag: true, markeer: m })).join("") || `<p class="leeg">Niets gevonden voor “${esc(q)}”.</p>`}</div>`;
+}
+
 /* ---------- Kijklijst ---------- */
 async function tekenKijklijst() {
   const rs = S.kijk.filter(k => k.soort === "reeks");
@@ -570,7 +632,18 @@ function tekenProfiel() {
   $("#pThemas").innerHTML = groepen.map(g => `<div><h3>${esc(g)}</h3><div class="pillen groot">${G.themas.filter(t => t.groep === g).map(t =>
     `<button class="pil" data-thema="${t.id}" aria-pressed="${p.themas.includes(t.id)}">${esc(t.naam)}</button>`).join("")}</div></div>`).join("");
   $("#pWoorden").innerHTML = p.trefwoorden.map(w => `<button class="pil" data-woordweg="${esc(w)}" aria-label="${esc(w)} verwijderen">${esc(w)} <span class="x">×</span></button>`).join("") || `<span class="klein">Nog geen trefwoorden.</span>`;
-  $("#pFavs").innerHTML = G.index.zenders.map(z => `<button class="favknop" data-favknop="${z.id}" aria-pressed="${p.favorieten.includes(z.id)}" title="${esc(z.naam)}">${logo(z, true)}<span class="nm">${esc(z.naam)}</span></button>`).join("");
+  const favEerst = [...p.favorieten.map(id => G.zMap[id]).filter(Boolean), ...G.index.zenders.filter(z => !p.favorieten.includes(z.id))];
+  $("#pFavs").innerHTML = favEerst.map(z => { const r = p.favorieten.indexOf(z.id);
+    return `<button class="zendertegel" data-favknop="${z.id}" aria-pressed="${r >= 0}" title="${esc(z.naam)}"><span class="rang">${r >= 0 ? r + 1 : ""}</span>${logo(z, true)}<span class="nm">${esc(z.naam)}</span></button>`; }).join("");
+  const L = p.geleerd || {};
+  const top = (o, n) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0).slice(0, n);
+  const lg = top(L.g, 6), lc = top(L.c, 4);
+  $("#pGeleerd").innerHTML = (L.n || 0) < 1 ? `<p class="klein">Nog niets geleerd. Bewaar programma's, volg reeksen of tik op <b>Niet voor mij</b>, dan worden je tips vanzelf beter.</p>` : `
+    <p class="klein">Gebaseerd op ${L.n} keer bewaren, volgen, openen of wegtikken.</p>
+    ${lg.length ? `<div><h3>Je kijkt graag naar</h3><div class="pillen">${lg.map(([g]) => `<span class="pil">${esc(g)}</span>`).join("")}</div></div>` : ""}
+    ${lc.length ? `<div><h3>Zenders die vaker opduiken</h3><div class="pillen">${lc.map(([c]) => `<span class="pil">${esc(G.zMap[c]?.naam || c)}</span>`).join("")}</div></div>` : ""}
+    ${L.nee?.length ? `<p class="klein">${L.nee.length} programma's krijg je niet meer als tip.</p>` : ""}
+    <button class="knop stil klein" data-vergeet type="button">Vergeet wat de gids leerde</button>`;
   $("#pMeldAan").checked = p.melding_aan;
   $("#pMeldTips").checked = p.tips_in_melding;
   $("#pMeldUur").innerHTML = Array.from({ length: 8 }, (_, i) => i + 14).map(u => `<option value="${u}"${u === p.melding_uur ? " selected" : ""}>${u}:00</option>`).join("");
@@ -630,6 +703,7 @@ async function pushKnop() {
 /* ---------- Detailvenster ---------- */
 function toonDetail(k) {
   const p = vind(k); if (!p) return;
+  if (!geopend.has(k) && !$("#detail").open) { geopend.add(k); leer(p, 0.5); }
   const z = G.zMap[p.c];
   const kijk = opKijklijst(p), volgt = reeksen().has(norm(p.t));
   const feiten = [p.se ? `Seizoen ${p.se}${p.ep ? `, afl. ${p.ep}` : ""}` : "", ...p.g, p.j, p.land, p.a ? `${p.a}+` : "", `${Math.round((p.e - p.b) / 60)} min`].filter(Boolean);
@@ -648,6 +722,7 @@ function toonDetail(k) {
       ${p.e > nu() ? `<button class="knop${kijk === "uitzending" ? " aan" : ""}" data-kijk="${sleutel(p)}">${kijk === "uitzending" ? "Op je kijklijst ✓" : "Op kijklijst"}</button>` : ""}
       <button class="knop lijn${volgt ? " aan" : ""}" data-volg="${esc(p.t)}">${volgt ? "Je volgt deze reeks ✓" : "Volg deze reeks"}</button>
       <button class="knop stil" data-zender="${z.id}" data-dag="${tvDag(p.b)}">Meer op ${esc(z.naam)}</button>
+      <button class="knop stil" data-nee="${sleutel(p)}">Niet voor mij</button>
     </div>
     ${ook.length ? `<div class="ookop">Ook te zien: ${ook.map(x => `<button data-p="${sleutel(x)}">${esc(dagNaam(tvDag(x.b)))} ${tijd(x.b)} op ${esc(G.zMap[x.c]?.naam)}</button>`).join(" · ")}</div>` : ""}`;
   if (!$("#detail").open) $("#detail").showModal();
@@ -679,7 +754,8 @@ const VRAGEN = [
   { id: "Verhalen", vraag: "Welke verhalen grijpen je?", uitleg: "Voor series en films. Detective of liever een romcom?" },
   { id: "Shows", vraag: "Welke programma's zet je graag op?", uitleg: "Spel, reality, koken en meer." },
   { id: "Onderwerpen", vraag: "Welke onderwerpen boeien je?", uitleg: "Voor documentaires en reportages." },
-  { id: "Sport", vraag: "Welke sport volg je?", uitleg: "Kies Geen sport als je er niets van wil zien." }
+  { id: "Sport", vraag: "Welke sport volg je?", uitleg: "Kies Geen sport als je er niets van wil zien." },
+  { id: "zenders", vraag: "Wat zijn je voorkeurzenders?", uitleg: "Tik ze aan in volgorde van voorkeur: je eerste keuze weegt het zwaarst. Je tips komen eerst van deze zenders, daarna vullen we aan met andere zenders." }
 ];
 const SPORT_EXTRA = [{ id: "sport", naam: "Andere sport", sub: "Atletiek, basket, darts, snooker…" }, { id: "geen", naam: "Geen sport", sub: "Liever geen sport in mijn tips" }];
 
@@ -692,15 +768,15 @@ function optiesVoor(v) {
 function startOnboarding() {
   const pr = S.profiel, a = {};
   a.talen = new Set(pr.talen.length ? pr.talen : ["nl"]);
-  for (const v of VRAGEN.slice(1)) a[v.id] = new Set(optiesVoor(v).map(o => o.id).filter(id => pr.themas.includes(id)));
+  for (const v of VRAGEN.slice(1, -1)) a[v.id] = new Set(optiesVoor(v).map(o => o.id).filter(id => pr.themas.includes(id)));
   if (pr.onboarding_klaar && !pr.themas.some(id => G.themas.find(t => t.id === id)?.groep === "Sport") && !pr.themas.includes("sport")) a.Sport.add("geen");
-  S.ob = { stap: 0, a, favs: null, naam: pr.naam || "", uur: pr.melding_uur, meldAan: pr.melding_aan };
+  S.ob = { stap: 0, a, zenders: [...pr.favorieten], alleZenders: false, naam: pr.naam || "", uur: pr.melding_uur, meldAan: pr.melding_aan };
 }
 
 /* Antwoorden omzetten naar profielvelden. */
 function obProfiel() {
   const a = S.ob.a, themas = new Set();
-  for (const v of VRAGEN.slice(1)) for (const id of a[v.id]) if (id !== "geen") themas.add(id);
+  for (const v of VRAGEN.slice(1, -1)) for (const id of a[v.id]) if (id !== "geen") themas.add(id);
   if (a.Sport.has("geen")) for (const t of G.themas) if (t.groep === "Sport" || t.id === "sport") themas.delete(t.id);
   return { talen: [...a.talen], themas: [...themas] };
 }
@@ -708,7 +784,6 @@ function obProfiel() {
 function voorgesteldeFavs(talen, themas) {
   const ids = [];
   const voeg = (...l) => { for (const id of l) if (G.zMap[id] && !ids.includes(id)) ids.push(id); };
-  voeg(...S.profiel.favorieten);
   if (talen.includes("nl")) {
     voeg("vtmhd", "eenhd", "vierhd", "ketnetcanvashd", "2behd", "vijfhd");
     const regio = G.index.zenders.find(z => z.n === 8); if (regio) voeg(regio.id);
@@ -735,6 +810,28 @@ function tekenWelkom() {
   $("#obTerug").style.visibility = stap === 0 ? "hidden" : "visible";
   $("#obLater").hidden = laatste;
 
+  if (!laatste && VRAGEN[stap].id === "zenders") {
+    const v = VRAGEN[stap], { talen, themas } = obProfiel();
+    const voorstel = voorgesteldeFavs(talen, themas);
+    const inTaal = G.index.zenders.filter(z => !talen.length || talen.includes(z.taal)).map(z => z.id);
+    const rest = (S.ob.alleZenders ? G.index.zenders.map(z => z.id) : inTaal).filter(id => !voorstel.includes(id));
+    const tegel = id => {
+      const z = G.zMap[id], r = S.ob.zenders.indexOf(id);
+      return `<button class="zendertegel" data-obfav="${id}" aria-pressed="${r >= 0}" title="${esc(z.naam)}">
+        <span class="rang">${r >= 0 ? r + 1 : ""}</span>${logo(z, true)}<span class="nm">${esc(z.naam)}</span></button>`;
+    };
+    $("#obVraag").textContent = v.vraag;
+    $("#obUitleg").textContent = v.uitleg;
+    $("#obInhoud").innerHTML = `
+      ${S.ob.zenders.length ? `<p class="volgorde">Jouw volgorde: ${S.ob.zenders.map((id, i) => `<b>${i + 1}</b> ${esc(G.zMap[id]?.naam)}`).join(" · ")}</p>` : ""}
+      <h3 class="tegelkop">Voorgesteld voor jou</h3>
+      <div class="zendertegels">${voorstel.map(tegel).join("")}</div>
+      <h3 class="tegelkop">${S.ob.alleZenders ? "Alle andere zenders" : "Andere zenders in jouw talen"}</h3>
+      <div class="zendertegels">${rest.map(tegel).join("")}</div>
+      <button class="tekstknop" data-alzend type="button">${S.ob.alleZenders ? "Alleen zenders in mijn talen" : "Toon alle zenders"}</button>`;
+    $("#obVolgende").textContent = S.ob.zenders.length ? "Volgende" : "Overslaan";
+    return;
+  }
   if (!laatste) {
     const v = VRAGEN[stap];
     $("#obVraag").textContent = v.vraag;
@@ -747,14 +844,13 @@ function tekenWelkom() {
 
   // Samenvatting
   const { talen, themas } = obProfiel();
-  S.ob.favs ||= new Set(voorgesteldeFavs(talen, themas));
-  const kandidaat = { ...S.profiel, talen, themas, favorieten: [...S.ob.favs] };
+  const favs = S.ob.zenders.length ? S.ob.zenders : voorgesteldeFavs(talen, themas).slice(0, 6);
+  const kandidaat = { ...S.profiel, talen, themas, favorieten: favs };
   const echt = S.profiel; S.profiel = kandidaat;
   const iso = vandaag();
   const tips = tipsVoor(iso, Math.max(lokaal(iso, 18), nu() - 600), lokaal(iso, 23, 30), 20);
   S.profiel = echt;
   const namen = themas.map(id => G.themas.find(t => t.id === id)?.naam).filter(Boolean);
-  const zenders = [...new Set([...voorgesteldeFavs(talen, themas), ...S.ob.favs])];
 
   $("#obVraag").textContent = "Klaar! Dit is je profiel";
   $("#obUitleg").textContent = "Pas aan wat je wil. Alles kan je later nog wijzigen in je profiel.";
@@ -765,8 +861,9 @@ function tekenWelkom() {
     <section><h2>Je naam</h2><label class="vh" for="obNaam">Je naam</label><input id="obNaam" type="text" autocomplete="given-name" placeholder="Je voornaam" value="${esc(S.ob.naam)}"></section>
     <section><h2>Talen</h2><div class="pillen">${talen.map(t => `<span class="pil">${esc(TALEN.find(x => x.id === t)?.naam)}</span>`).join("") || `<span class="klein">Geen taal gekozen: je krijgt tips in alle talen.</span>`}</div></section>
     <section><h2>Je interesses</h2><div class="pillen">${namen.map(n => `<span class="pil">${esc(n)}</span>`).join("") || `<span class="klein">Nog geen interesses gekozen. Je krijgt algemene tips.</span>`}</div></section>
-    <section><h2>Favoriete zenders</h2><p class="klein" style="margin:0">Voorgesteld op basis van je antwoorden. Tik om aan of uit te zetten.</p>
-      <div class="favraster">${zenders.map(id => { const z = G.zMap[id]; return `<button class="favknop" data-obfav="${id}" aria-pressed="${S.ob.favs.has(id)}" title="${esc(z.naam)}">${logo(z, true)}<span class="nm">${esc(z.naam)}</span></button>`; }).join("")}</div></section>
+    <section><h2>Voorkeurzenders</h2>
+      ${S.ob.zenders.length ? "" : `<p class="klein" style="margin:0">Je koos er geen, dus we nemen deze voorstellen. Aanpassen kan bij de vorige vraag of in je profiel.</p>`}
+      <ol class="rangLijst">${favs.map(id => `<li>${logo(G.zMap[id], true)} ${esc(G.zMap[id]?.naam)}</li>`).join("")}</ol></section>
     <section><h2>Dagelijkse melding</h2>
       <label class="schakel"><input type="checkbox" id="obMeldAan"${S.ob.meldAan ? " checked" : ""}> <span>Stuur me elke dag wat er vanavond voor mij op tv is</span></label>
       <div class="instelrij"><label for="obUur">Om</label><select id="obUur">${Array.from({ length: 8 }, (_, i) => i + 14).map(u => `<option value="${u}"${u === S.ob.uur ? " selected" : ""}>${u}:00</option>`).join("")}</select></div>
@@ -787,7 +884,6 @@ function obKies(vraag, optie) {
     if (vraag === "Sport" && optie !== "geen") set.delete("geen");
     set.add(optie);
   }
-  S.ob.favs = null; // voorstellen opnieuw berekenen
   tekenWelkom();
 }
 
@@ -795,7 +891,8 @@ async function obKlaar(overslaan = false) {
   const p = S.profiel;
   if (!overslaan) {
     const { talen, themas } = obProfiel();
-    Object.assign(p, { talen, themas, favorieten: [...S.ob.favs], naam: S.ob.naam.trim() || p.naam, melding_uur: S.ob.uur, melding_aan: S.ob.meldAan });
+    const favs = S.ob.zenders.length ? S.ob.zenders : voorgesteldeFavs(talen, themas).slice(0, 6);
+    Object.assign(p, { talen, themas, favorieten: favs, naam: S.ob.naam.trim() || p.naam, melding_uur: S.ob.uur, melding_aan: S.ob.meldAan });
   }
   p.onboarding_klaar = true;
   try { await OP.bewaarProfiel(p); } catch (e) { toast("Bewaren lukte niet: " + e.message); return; }
@@ -835,9 +932,13 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.nee) { e.stopPropagation(); const p = vind(d.nee); if (p) { $("#detail").close(); nietVoorMij(p); } return; }
+    if (d.vergeet !== undefined) { S.profiel.geleerd = {}; bewaarProfiel(); toast("De gids is vergeten wat hij over je leerde"); return tekenProfiel(); }
+    if (d.allezoek !== undefined) { S.zoek = $("#snelZoek").value; location.hash = "zoeken"; return; }
+    if (d.alzend !== undefined) { S.ob.alleZenders = !S.ob.alleZenders; return tekenWelkom(); }
     if (d.kijk) { e.stopPropagation(); const p = vind(d.kijk); if (p) wisselUitzending(p); return; }
     if (d.volg) return wisselReeks(d.volg);
     if (d.ontvolg) return wisselReeks(d.ontvolg);
@@ -852,7 +953,7 @@ function koppel() {
     if (d.favknop) { wisselFav(d.favknop); return; }
     if (d.sluit !== undefined) return $("#detail").close();
     if (d.obkeuze) { const [v, o] = d.obkeuze.split("|"); return obKies(v, o); }
-    if (d.obfav) { const f = S.ob.favs; f.has(d.obfav) ? f.delete(d.obfav) : f.add(d.obfav); t.setAttribute("aria-pressed", f.has(d.obfav)); return; }
+    if (d.obfav) { const z = S.ob.zenders, i = z.indexOf(d.obfav); i >= 0 ? z.splice(i, 1) : z.push(d.obfav); return tekenWelkom(); }
     if (d.taal) { const l = S.profiel.talen; S.profiel.talen = l.includes(d.taal) ? l.filter(x => x !== d.taal) : [...l, d.taal]; bewaarProfiel(); return tekenProfiel(); }
     if (d.p) return toonDetail(d.p);
   });
@@ -864,6 +965,9 @@ function koppel() {
   $("#zenderFilter").addEventListener("input", e => { S.zenderFilter = e.target.value; tekenZenders(); });
   let zt;
   $("#zoekInput").addEventListener("input", e => { S.zoek = e.target.value; clearTimeout(zt); zt = setTimeout(tekenZoeken, 180); });
+  let st;
+  $("#snelZoek").addEventListener("input", () => { clearTimeout(st); st = setTimeout(tekenSnelZoek, 180); });
+  $("#snelForm").addEventListener("submit", e => { e.preventDefault(); S.zoek = $("#snelZoek").value; location.hash = "zoeken"; });
   $("#zoekForm").addEventListener("submit", e => { e.preventDefault(); $("#zoekInput").blur(); tekenZoeken(); });
   $("#pNaam").addEventListener("input", e => { S.profiel.naam = e.target.value.trim(); $("#initiaal").textContent = initiaal(); bewaarProfiel(); });
   $("#pWoordForm").addEventListener("submit", e => {

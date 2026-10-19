@@ -29,6 +29,16 @@ meldingen via web-push vanuit de PWA.
   + voorgestelde favorieten. Start vanzelf zolang `onboarding_klaar` false is en er geen interesses zijn.
   Elke zender heeft in `index.json` een `taal` (nl/en/fr/de/andere, zie `zender_taal()` in `gids.py`);
   programma's op zenders buiten `profiel.talen` krijgen −40 in de score.
+- Scoreregels (identiek in `app.js` `score()` en `melding.py` `score()`): thema +14 (+6 per extra), trefwoord
+  +40 titel / +15 elders, voorkeurzender `max(6, 14 − 2·rang)`, nieuw +6, live +5, korte programma's −30,
+  nieuws zonder nieuwsinteresse −25, andere taal −40, `geleerd.nee` −100, geleerde gewichten
+  (som genres begrensd −15..20, zender −6..8). Een persoonlijke tip moet relevant zijn (thema/trefwoord
+  gematcht of geleerde bonus ≥ 5) en ≥ 20 scoren. Selectie: eerst voorkeurzenders in volgorde, max 2
+  per zender, dan aanvullen.
+- Lerend profiel `profielen.geleerd` (jsonb): `g` genre→gewicht, `c` zender→gewicht, `nee` genormaliseerde
+  titels, `n` aantal signalen. Signalen in `leer()`: bewaren +3, uit kijklijst −1, reeks volgen +4,
+  ontvolgen −2, detail openen +0,5, Niet voor mij −1,5 + titel in `nee`. Elke stap ×0,97 verval.
+  `norm()` moet in JS en Python hetzelfde blijven (de `nee`-titels worden ermee vergeleken).
   Zonder `SUPABASE_URL` draait de app in **demo-modus** (`LokaleOpslag`, localStorage).
 - `supabase/schema.sql`: tabellen `profielen`, `kijklijst` (soort `uitzending` of `reeks`),
   `push_abonnementen`, `meldingen_log`; RLS op alles; RPC `registreer_toestel`.
@@ -57,7 +67,7 @@ Na wijzigingen aan bestanden in `web/`: verhoog `VERSIE` in `web/sw.js`, anders 
 
 ## Status (19 oktober 2026)
 
-Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (6 vragen + samenvatting), Vanavond met tips, Gids-rooster, Zenders,
+Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (7 vragen incl. voorkeurzenders in volgorde + samenvatting), lerend profiel en Niet voor mij, zoekveld op Vanavond, Vanavond met tips, Gids-rooster, Zenders,
 Zoeken (dagen, uren, zenders, thema's, typfouten), Kijklijst (uitzending + reeks volgen), Profiel,
 detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 
@@ -70,7 +80,7 @@ detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 
 1. Repo op GitHub zetten (publiek), Pages-bron op "GitHub Actions".
 2. De gebruiker begeleiden door de Supabase-setup (README stap 2-4). `schema.sql` bevat ook de
-   kolommen `talen` en `onboarding_klaar`; op een bestaande database kan het script gewoon opnieuw. Accounts aanmaken doet de gebruiker zelf.
+   kolommen `talen`, `onboarding_klaar` en `geleerd`; op een bestaande database kan het script gewoon opnieuw. Accounts aanmaken doet de gebruiker zelf.
 3. `python3 maak_vapid.py` lokaal laten draaien; `web/config.js` invullen; secrets/variables zetten.
 4. End-to-end testen: inloggen via magic link, voorkeuren bewaren, meldingen aanzetten op Android en iPhone,
    `meldingen.yml` met `droog` en daarna echt.

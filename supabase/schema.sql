@@ -16,6 +16,8 @@ create table if not exists public.profielen (
 -- Toegevoegd met de onboarding (ook voor databases die al bestonden):
 alter table public.profielen add column if not exists talen text[] not null default '{}';  -- nl, en, fr, de, andere
 alter table public.profielen add column if not exists onboarding_klaar boolean not null default false;
+-- Lerend profiel: gewichten per genre (g) en zender (c), weggetikte titels (nee), aantal signalen (n).
+alter table public.profielen add column if not exists geleerd jsonb not null default '{}';
 
 -- Kijklijst: een specifieke uitzending (soort 'uitzending') of een hele reeks
 -- volgen op titel (soort 'reeks'), zodat elke nieuwe uitzending meetelt.
