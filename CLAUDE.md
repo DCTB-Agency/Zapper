@@ -93,7 +93,10 @@ detailvenster, en `melding.py`'s opbouw van de melding met een testprofiel.
 
 ## Volgende stappen
 
-1. Repo op GitHub zetten (publiek), Pages-bron op "GitHub Actions".
+1. Pushen naar de bestaande, nog lege privé-repo **DCTB-Agency/Zapper** (`origin` staat al goed). Daarvoor
+   heeft `gh` het `workflow`-recht nodig: `gh auth refresh -h github.com -s workflow` (de gebruiker bevestigt in de
+   browser), dan `git push -u origin main`. Voor gratis GitHub Pages moet de repo publiek; vraag dat eerst aan de
+   gebruiker. Daarna Pages-bron op "GitHub Actions". Zie ook `OVERZETTEN.md`.
 2. De gebruiker begeleiden door de Supabase-setup (README stap 2-4). `schema.sql` bevat ook de
    kolommen `talen`, `onboarding_klaar` en `geleerd`; op een bestaande database kan het script gewoon opnieuw. Accounts aanmaken doet de gebruiker zelf.
 3. `python3 maak_vapid.py` lokaal laten draaien; `web/config.js` invullen; secrets/variables zetten.
