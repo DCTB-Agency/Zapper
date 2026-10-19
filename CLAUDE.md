@@ -28,8 +28,8 @@ meldingen via web-push vanuit de PWA.
   Onboarding (`#welkom`, blok "Onboarding" in `app.js`): 8 vragen, elk met "Geen voorkeur" (`S.ob.geen`, sluit
   de andere keuzes uit; leeg = telt niet mee). Vraag "programmas" zoekt titels (`zoekTitels()`, ook gebruikt op de
   Kijklijst) en bewaart ze als kijklijst-rijen met soort `reeks` (in de UI "favoriete programma's").
-  Eerder: 6 vragen → `profielen.talen` + `profielen.themas`
-  + voorgestelde favorieten. Start vanzelf zolang `onboarding_klaar` false is en er geen interesses zijn.
+  Antwoorden → `profielen.talen`, `profielen.themas`, `profielen.favorieten` (in volgorde) en reeksen.
+  Start vanzelf zolang `onboarding_klaar` false is en er geen interesses zijn.
   Elke zender heeft in `index.json` een `taal` (nl/en/fr/de/andere, zie `zender_taal()` in `gids.py`);
   programma's op zenders buiten `profiel.talen` krijgen −40 in de score.
 - Scoreregels (identiek in `app.js` `score()` en `melding.py` `score()`): thema +14 (+6 per extra), trefwoord
