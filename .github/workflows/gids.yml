@@ -3,7 +3,9 @@ name: Gids vernieuwen en publiceren
 on:
   schedule:
     - cron: "15 3 * * *"    # elke nacht (05:15 zomertijd, 04:15 wintertijd)
+    - cron: "15 9 * * *"    # overdag nog drie keer, zodat nieuwe streamingtitels snel verschijnen
     - cron: "15 13 * * *"   # en in de namiddag, voor last-minute wijzigingen
+    - cron: "15 17 * * *"
   push:
     branches: [main]
   workflow_dispatch:
@@ -34,6 +36,9 @@ jobs:
           restore-keys: details-
       - name: Gids ophalen
         run: python3 gids.py --stad "${{ vars.TELENET_STAD || '20001' }}"
+      - name: Streamingdiensten ophalen
+        continue-on-error: true   # lukt dit niet, dan blijft de tv-gids gewoon werken
+        run: python3 streaming.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

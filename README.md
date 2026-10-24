@@ -6,8 +6,8 @@ Made by [DCTB Agency](https://www.dctb.be).
 Zapper is een web-app die elke dag de tv-gids van het Telenet-basisaanbod ophaalt (97 zenders, regio
 Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 
-- **Onboarding**: bij de eerste keer 8 vragen (talen, soort programma's, verhalen, shows, onderwerpen,
-  sport, favoriete programma's en je voorkeurzenders in volgorde). Telkens meerdere antwoorden mogelijk,
+- **Onboarding**: bij de eerste keer 9 vragen (talen, soort programma's, verhalen, shows, onderwerpen,
+  sport, je streamingdiensten, favoriete programma's en je voorkeurzenders in volgorde). Telkens meerdere antwoorden mogelijk,
   of **Geen voorkeur**. Daarna zie je meteen je profiel en hoeveel tips je er vanavond mee krijgt.
   Je kan de vragen later opnieuw doen.
 - **Favoriete programma's**: zoek op naam (typfouten mogen) en voeg toe, in de onboarding of op je
@@ -19,6 +19,12 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   per zender). Met **Niet voor mij** haal je een programma uit je tips. In je profiel zie je wat de gids
   leerde, en je kan het laten vergeten.
 - **Vanavond**: zoekveld bovenaan, tips op maat volgens je interesses, trefwoorden en voorkeurzenders, plus wat er nu op je zenders loopt.
+  De tips staan **per tijdstip** (per halfuur): je ziet tot 4 tips die op hetzelfde moment op verschillende zenders beginnen.
+  Op de gsm schuif je per tijdstip opzij.
+- **Streaming**: wat er nieuw is op Netflix, Disney+, Prime Video, HBO Max, Apple TV+, VRT MAX, VTM GO, Telenet,
+  Hayu, Crunchyroll en MUBI, met de dag waarop het online kwam, wat **binnenkort** komt (met datum) en wat populair is.
+  Bovenaan tips volgens je interesses. De gegevens komen van JustWatch en worden 4 keer per dag vernieuwd.
+  Wat vandaag nieuw is op jouw diensten, staat ook in je dagelijkse melding.
 - **Gids**: tijdrooster per dag, filter op zendergroep of favorieten.
 - **Zenders**: het volledige dagprogramma van één zender.
 - **Zoeken**: slim zoeken, volledig in de browser (geen betalende AI-dienst). Begrijpt dagen
@@ -37,12 +43,14 @@ Supabase (logins en opslag).
 
 ```
 gids.py                 haalt de Telenet-gids op naar web/data/ (draait in GitHub Actions)
+streaming.py            haalt nieuw, binnenkort en populair op streamingdiensten op (JustWatch)
 melding.py              stuurt de dagelijkse pushmeldingen (draait in GitHub Actions)
 maak_vapid.py           maakt eenmalig de sleutels voor pushmeldingen
 maak_icoon.py           tekent de app-iconen
 supabase/schema.sql     database: profielen, kijklijst, toestellen
+supabase/update-*.sql   kleine updates voor een database die al bestond
 web/                    de web-app (statisch, geen build-stap)
-.github/workflows/      gids.yml (elke nacht + namiddag) en meldingen.yml (elk uur 14u-21u)
+.github/workflows/      gids.yml (4 keer per dag) en meldingen.yml (elk uur 14u-21u)
 ```
 
 ## Lokaal uitproberen (demo-modus)
@@ -128,7 +136,7 @@ Eens Zapper online staat, werkt hij zelfstandig. Er is geen handmatige update no
 
 | Wat | Wanneer | Door |
 |---|---|---|
-| Tv-gids ophalen (8 dagen vooruit) | elke dag rond 05u en 15u | workflow *Gids vernieuwen en publiceren* |
+| Tv-gids ophalen (8 dagen vooruit) en streaming | elke dag rond 05u, 11u, 15u en 19u | workflow *Gids vernieuwen en publiceren* |
 | Dagelijkse meldingen | elk uur van 14u tot 21u | workflow *Dagelijkse meldingen* |
 | Geplande workflows actief houden | bij elke geplande gidsrun | job *levend-houden* in `gids.yml` |
 
@@ -142,6 +150,9 @@ Waar je wel op moet letten:
   **Enable workflow**.
 - **Supabase pauzeert gratis projecten** na een week zonder gebruik. De meldingen-workflow gebruikt de database elke
   dag, dus dat gebeurt niet zolang die draait.
+- **JustWatch wijzigt zijn website.** Ook de streaminggegevens komen niet uit een officiële API. Mislukt het ophalen,
+  dan blijft de tv-gids gewoon werken en toont het tabblad Streaming de laatste gegevens. Dan moet `streaming.py` aangepast worden.
+  VTM GO en Telenet houdt JustWatch minder goed bij: daar is "nieuw" wat er sinds de vorige run bijkwam.
 - **Pushmeldingen** van een toestel dat de app verwijderd heeft, worden automatisch opgeruimd.
 
 ## Goed om te weten

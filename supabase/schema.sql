@@ -18,6 +18,8 @@ alter table public.profielen add column if not exists talen text[] not null defa
 alter table public.profielen add column if not exists onboarding_klaar boolean not null default false;
 -- Lerend profiel: gewichten per genre (g) en zender (c), weggetikte titels (nee), aantal signalen (n).
 alter table public.profielen add column if not exists geleerd jsonb not null default '{}';
+-- Streamingdiensten die je hebt (JustWatch-codes uit streaming.py, bv. {nfx,dnp,vrt}):
+alter table public.profielen add column if not exists streaming text[] not null default '{}';
 
 -- Kijklijst: een specifieke uitzending (soort 'uitzending') of een hele reeks
 -- volgen op titel (soort 'reeks'), zodat elke nieuwe uitzending meetelt.

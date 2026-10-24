@@ -4,7 +4,8 @@ Draait elk uur in de namiddag via GitHub Actions. Wie zijn meldingsuur bereikt
 heeft en vandaag nog niets kreeg, krijgt één melding met:
   - uitzendingen van vanavond die op zijn kijklijst staan,
   - nieuwe uitzendingen van reeksen die hij volgt,
-  - en (als hij dat wil) de beste tips volgens zijn interesses.
+  - en (als hij dat wil) de beste tips volgens zijn interesses,
+  - plus wat er vandaag nieuw is op zijn streamingdiensten (web/data/streaming.json).
 
 Omgevingsvariabelen:
   SUPABASE_URL, SUPABASE_SERVICE_KEY   service_role-sleutel (geheim!)
@@ -122,7 +123,30 @@ def score(p, profiel, themas, zender_n, zender_taal):
     return s, reden, relevant
 
 
-def melding_voor(profiel, kijklijst, progs, themas, zenders, nu):
+def streaming_regel(profiel, stream, vandaag):
+    """Eén regel over wat er vandaag nieuw online staat op je eigen streamingdiensten."""
+    mijn = set(profiel.get("streaming") or [])
+    if not mijn or not stream:
+        return None
+    namen = {d["id"]: d["naam"] for d in stream["diensten"]}
+    nieuw = [it for it in stream["items"] if it["soort"] == "nieuw" and it.get("datum") == vandaag and it["dienst"] in mijn]
+    if not nieuw:
+        return None
+    interesses = set(profiel.get("themas") or []) - {"film", "series"}
+    nee = set((profiel.get("geleerd") or {}).get("nee") or [])
+    def waarde(it):
+        t = stream["titels"].get(it["id"], {})
+        return (len(interesses & set(t.get("th", []))), t.get("imdb") or 0)
+    beste = [it for it in sorted(nieuw, key=waarde, reverse=True)
+             if waarde(it)[0] and norm(stream["titels"][it["id"]]["t"]) not in nee][:2]
+    if not beste:
+        return f"Streaming: vandaag {len(nieuw)} nieuw op je diensten"
+    delen = [f"{stream['titels'][it['id']]['t']}{' S' + str(it['se']) if it.get('se') else ''} ({namen.get(it['dienst'], it['dienst'])})" for it in beste]
+    meer = len(nieuw) - len(beste)
+    return "Nieuw op streaming: " + ", ".join(delen) + (f" +{meer}" if meer > 0 else "")
+
+
+def melding_voor(profiel, kijklijst, progs, themas, zenders, nu, stream=None):
     zender_naam = {z["id"]: z["naam"] for z in zenders}
     zender_n = {z["id"]: z["n"] for z in zenders}
     zender_taal = {z["id"]: z.get("taal", "nl") for z in zenders}
@@ -165,14 +189,17 @@ def melding_voor(profiel, kijklijst, progs, themas, zenders, nu):
             if sum(1 for _, w in regels if w == "tip") >= 3:
                 break
 
-    if not regels:
+    st = streaming_regel(profiel, stream, nu.date().isoformat())
+    if not regels and not st:
         return None
+    if not regels:
+        return {"title": "Nieuw op je streamingdiensten", "body": st, "tag": f"avond-{nu.date()}", "url": "./#streaming"}
     regels.sort(key=lambda x: x[0]["b"])
     n_kijk = sum(1 for _, w in regels if w == "kijklijst")
     tekst = "\n".join(
         f"{dt.datetime.fromtimestamp(p['b'], TZ):%H:%M} {p['t']} · {zender_naam.get(p['c'], p['c'])}{' ★' if w == 'kijklijst' else ''}"
-        for p, w in regels[:6]
-    )
+        for p, w in regels[:5 if st else 6]
+    ) + (f"\n{st}" if st else "")
     if n_kijk:
         titel = f"Vanavond: {n_kijk} van je kijklijst" + (" + tips" if len(regels) > n_kijk else "")
     else:
@@ -191,6 +218,11 @@ def main():
     index = lees_json("data/index.json")
     progs = lees_json(f"data/dag-{dag}.json")
     themas = lees_json("themas.json")
+    try:
+        stream = lees_json("data/streaming.json")
+    except Exception as e:
+        log(f"Geen streamingdata: {e}")
+        stream = None
 
     sb = Supabase()
     profielen = sb.req("GET", "profielen?melding_aan=eq.true&select=*")
@@ -208,7 +240,7 @@ def main():
         if not args.forceer and (uid in al_gehad or nu.hour < prof["melding_uur"]):
             continue
         kijk = sb.req("GET", f"kijklijst?user_id=eq.{uid}&select=*")
-        msg = melding_voor(prof, kijk, progs, themas, index["zenders"], nu)
+        msg = melding_voor(prof, kijk, progs, themas, index["zenders"], nu, stream)
         wie = prof.get("naam") or uid[:8]
         if not msg:
             log(f"- {wie}: niets voor vanavond")

@@ -44,6 +44,7 @@
         <a href="#vanavond" data-tab="vanavond">Vanavond</a>
         <a href="#gids" data-tab="gids">Gids</a>
         <a href="#zenders" data-tab="zenders">Zenders</a>
+        <a href="#streaming" data-tab="streaming">Streaming</a>
         <a href="#zoeken" data-tab="zoeken">Zoeken</a>
         <a href="#kijklijst" data-tab="kijklijst">Kijklijst</a>
       </nav>
@@ -106,7 +107,7 @@
 
       <div class="blok">
         <div class="blok-kop"><h2 id="tipsTitel">Voor jou vanavond</h2><p id="tipsUitleg"></p></div>
-        <div class="kaarten" id="tips"></div>
+        <div class="slots" id="tips"></div>
       </div>
 
       <div class="blok">
@@ -140,6 +141,13 @@
         </aside>
         <div class="zender-detail" id="zenderDetail"></div>
       </div>
+    </section>
+
+    <!-- Streaming -->
+    <section id="v-streaming" class="view" hidden>
+      <div class="hero"><div><div class="eyebrow">Netflix, Disney+, VRT MAX en meer</div><h1>Nieuw op <em>streaming</em></h1></div></div>
+      <div class="scrolrij" id="stDiensten" role="group" aria-label="Streamingdienst"></div>
+      <div id="stInhoud"><p class="leeg">Laden…</p></div>
     </section>
 
     <!-- Zoeken -->
@@ -191,6 +199,11 @@
         </div>
 
         <div class="blok">
+          <div class="blok-kop"><h2>Streamingdiensten</h2><p>Welke diensten heb je? Bij Streaming zie je dan wat daar nieuw is.</p></div>
+          <div class="pillen groot" id="pStreaming"></div>
+        </div>
+
+        <div class="blok">
           <div class="blok-kop"><h2>Trefwoorden</h2><p>Titels, personen of onderwerpen. Bv. <i>thuis</i>, <i>formule 1</i>, <i>Staf Coppens</i>.</p></div>
           <form id="pWoordForm" class="woordform">
             <label class="vh" for="pWoord">Trefwoord toevoegen</label>
@@ -239,6 +252,7 @@
     <a href="#vanavond" data-tab="vanavond"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.5A8 8 0 0 1 8.5 4a8 8 0 1 0 11.5 11.5Z"/></svg>Vanavond</a>
     <a href="#gids" data-tab="gids"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18M9 3v18"/></svg>Gids</a>
     <a href="#zenders" data-tab="zenders"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="m9 2 3 4 3-4"/></svg>Zenders</a>
+    <a href="#streaming" data-tab="streaming"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="m10 8 5 2.5-5 2.5Z"/><path d="M8 21h8"/></svg>Streaming</a>
     <a href="#zoeken" data-tab="zoeken"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Zoeken</a>
     <a href="#kijklijst" data-tab="kijklijst"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>Kijklijst</a>
   </nav>

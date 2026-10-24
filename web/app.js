@@ -63,7 +63,7 @@ function vind(k) {
 }
 
 /* ---------- Opslag ---------- */
-const STANDAARD = { naam: "", favorieten: [], themas: [], trefwoorden: [], talen: [], melding_aan: true, melding_uur: 17, tips_in_melding: true, onboarding_klaar: false, geleerd: {} };
+const STANDAARD = { naam: "", favorieten: [], themas: [], trefwoorden: [], talen: [], melding_aan: true, melding_uur: 17, tips_in_melding: true, onboarding_klaar: false, geleerd: {}, streaming: [] };
 
 class LokaleOpslag {
   constructor() { this.demo = true; this.email = "demo"; }
@@ -83,7 +83,10 @@ class SupaOpslag {
   async profiel() {
     const { data, error } = await this.sb.from("profielen").select("*").eq("user_id", this.uid).maybeSingle();
     if (error) throw error;
-    if (data) return { ...STANDAARD, ...data };
+    if (data) {
+      if (!("streaming" in data)) try { data.streaming = JSON.parse(localStorage.getItem("avondgids.streaming")) || []; } catch (_) {}
+      return { ...STANDAARD, ...data };
+    }
     const p = { ...STANDAARD, naam: (this.email || "").split("@")[0].split(/[._-]/)[0].replace(/^./, c => c.toUpperCase()) };
     await this.bewaarProfiel(p);
     return p;
@@ -91,7 +94,13 @@ class SupaOpslag {
   async bewaarProfiel(p) {
     const rij = { user_id: this.uid, bijgewerkt: new Date().toISOString() };
     for (const k of Object.keys(STANDAARD)) rij[k] = p[k];
-    const { error } = await this.sb.from("profielen").upsert(rij);
+    let { error } = await this.sb.from("profielen").upsert(rij);
+    // Database nog zonder kolom "streaming" (supabase/update-streaming.sql niet uitgevoerd): bewaar die dan in deze browser.
+    if (error && /streaming/.test(error.message)) {
+      try { localStorage.setItem("avondgids.streaming", JSON.stringify(p.streaming || [])); } catch (_) {}
+      delete rij.streaming;
+      ({ error } = await this.sb.from("profielen").upsert(rij));
+    }
     if (error) throw error;
   }
   async kijklijst() { const { data, error } = await this.sb.from("kijklijst").select("*"); if (error) throw error; return data; }
@@ -242,6 +251,27 @@ function tipsVoor(iso, van, tot, max = 9) {
   return uit.sort((a, b) => a.p.b - b.p.b);
 }
 
+/* Tips per halfuur: wat er op hetzelfde moment op verschillende zenders begint.
+   Per tijdslot max. `perSlot` tips, elk van een andere zender; voorkeurzenders eerst. */
+function tipsPerSlot(iso, van, tot, perSlot = 4) {
+  const ps = (G.dagen[iso] || []).filter(p => p.b >= van && p.b <= tot && p.e > nu());
+  const persoonlijk = heeftInteresses();
+  const kand = ps.map(p => {
+    if (persoonlijk) { const r = score(p); return { p, s: r.s, reden: r.reden, geleerd: r.geleerd }; }
+    return { p, s: algemeneScore(p), reden: [] };
+  }).filter(x => x.s >= (persoonlijk ? 20 : 30) && (!persoonlijk || x.reden.length || x.geleerd) && !opKijklijst(x.p));
+  const rang = c => { const r = S.profiel.favorieten.indexOf(c); return r < 0 ? 99 : r; };
+  kand.sort((a, b) => b.s - a.s || rang(a.p.c) - rang(b.p.c) || a.p.b - b.p.b);
+  const slots = {}, titels = new Set(), perZender = {};
+  for (const x of kand) {
+    const slot = Math.floor(x.p.b / 1800) * 1800, l = slots[slot] || [];
+    const t = norm(x.p.t);
+    if (l.length >= perSlot || titels.has(t) || l.some(y => y.p.c === x.p.c) || (perZender[x.p.c] || 0) >= 4) continue;
+    titels.add(t); perZender[x.p.c] = (perZender[x.p.c] || 0) + 1; l.push(x); slots[slot] = l;
+  }
+  return Object.keys(slots).map(Number).sort((a, b) => a - b).map(slot => ({ slot, tips: slots[slot].sort((a, b) => rang(a.p.c) - rang(b.p.c) || b.s - a.s) }));
+}
+
 /* ---------- Bouwstenen ---------- */
 function logo(z, mini = false) {
   if (!z) return "";
@@ -309,10 +339,13 @@ async function tekenVanavond() {
   $("#blokKijk").hidden = !kijk.length;
   $("#kijkVanavond").innerHTML = kijk.map(p => kaart(p)).join("");
 
-  const tips = tipsVoor(iso, Math.max(lokaal(iso, 18), nu() - 600), lokaal(iso, 23, 30));
+  const slots = tipsPerSlot(iso, Math.max(lokaal(iso, 18), nu() - 600), lokaal(iso, 23, 30));
   $("#tipsTitel").textContent = heeftInteresses() ? "Voor jou vanavond" : "Tips voor vanavond";
-  $("#tipsUitleg").textContent = heeftInteresses() ? "Volgens je interesses en favoriete zenders" : "Nieuwe afleveringen, films en live uitzendingen";
-  $("#tips").innerHTML = tips.map(x => kaart(x.p, x.reden, { geleerd: x.geleerd, nee: true })).join("") || `<p class="leeg">Geen tips meer voor vanavond. Kijk eens in de <a href="#gids">gids</a> of <a href="#zoeken">zoek</a> naar iets voor morgen.</p>`;
+  $("#tipsUitleg").textContent = heeftInteresses() ? "Per tijdstip, op verschillende zenders" : "Nieuwe afleveringen, films en live uitzendingen";
+  $("#tips").innerHTML = slots.map(({ slot, tips }) => `<div class="slot">
+      <div class="slotkop"><b>${tijd(slot)}</b><span>${tips.length === 1 ? "1 tip" : `${tips.length} tips op ${tips.length} zenders`}</span></div>
+      <div class="kaarten">${tips.map(x => kaart(x.p, x.reden, { geleerd: x.geleerd, nee: true })).join("")}</div>
+    </div>`).join("") || `<p class="leeg">Geen tips meer voor vanavond. Kijk eens in de <a href="#gids">gids</a> of <a href="#zoeken">zoek</a> naar iets voor morgen.</p>`;
 
   const favs = S.profiel.favorieten.length ? S.profiel.favorieten : G.index.zenders.filter(z => z.n <= 12).map(z => z.id);
   const t = nu();
@@ -632,6 +665,7 @@ function tekenProfiel() {
   const groepen = [...new Set(G.themas.map(t => t.groep))];
   $("#pThemas").innerHTML = groepen.map(g => `<div><h3>${esc(g)}</h3><div class="pillen groot">${G.themas.filter(t => t.groep === g).map(t =>
     `<button class="pil" data-thema="${t.id}" aria-pressed="${p.themas.includes(t.id)}">${esc(t.naam)}</button>`).join("")}</div></div>`).join("");
+  $("#pStreaming").innerHTML = DIENSTEN.map(d => `<button class="pil" data-dienst="${d.id}" aria-pressed="${(p.streaming || []).includes(d.id)}">${esc(d.naam)}</button>`).join("");
   $("#pWoorden").innerHTML = p.trefwoorden.map(w => `<button class="pil" data-woordweg="${esc(w)}" aria-label="${esc(w)} verwijderen">${esc(w)} <span class="x">×</span></button>`).join("") || `<span class="klein">Nog geen trefwoorden.</span>`;
   const andere = G.index.zenders.filter(z => !p.favorieten.includes(z.id) && (S.alleZendersProfiel || !p.talen.length || p.talen.includes(z.taal)));
   const favEerst = [...p.favorieten.map(id => G.zMap[id]).filter(Boolean), ...(S.alleZendersProfiel ? andere : andere.slice(0, 12))];
@@ -774,7 +808,115 @@ function toonDetail(k) {
   $("#detail").dataset.k = k;
 }
 
-/* ---------- Onboarding: 6 vragen die een eerste interesseprofiel maken ---------- */
+/* ---------- Streaming ----------
+   Data: web/data/streaming.json, gemaakt door streaming.py (bron JustWatch). Codes = JustWatch-codes, zelfde lijst als DIENSTEN in streaming.py. */
+const DIENSTEN = [
+  { id: "nfx", naam: "Netflix", sub: "Films, reeksen en docu's" }, { id: "dnp", naam: "Disney+", sub: "Disney, Marvel, Star Wars, Pixar" },
+  { id: "prv", naam: "Prime Video", sub: "Amazon" }, { id: "mxx", naam: "HBO Max", sub: "HBO-reeksen en Warner-films" },
+  { id: "atp", naam: "Apple TV+", sub: "Apple Originals" }, { id: "vrt", naam: "VRT MAX", sub: "Gratis, van de VRT" },
+  { id: "vtm", naam: "VTM GO", sub: "Van DPG Media" }, { id: "tel", naam: "Telenet", sub: "Streamz en Telenet TV" },
+  { id: "hay", naam: "Hayu", sub: "Reality" }, { id: "cru", naam: "Crunchyroll", sub: "Anime" }, { id: "mbi", naam: "MUBI", sub: "Arthouse en filmklassiekers" }
+];
+const dienstNaam = id => DIENSTEN.find(d => d.id === id)?.naam || id;
+const kalDag = (ts = nu()) => isoVan(ts);
+function relDag(iso) {
+  const d = Math.round((Date.parse(iso + "T12:00:00Z") - Date.parse(kalDag() + "T12:00:00Z")) / 864e5);
+  if (d === 0) return "Vandaag"; if (d === -1) return "Gisteren"; if (d === 1) return "Morgen";
+  return new Date(iso + "T12:00:00Z").toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" });
+}
+async function laadStreaming() {
+  if (!G.stream) G.stream = haal("data/streaming.json").catch(e => { G.stream = null; throw e; });
+  return G.stream;
+}
+/* Past een streamingtitel bij je interesses? Zelfde thema-id's als de tv-tips. */
+function stScore(t) {
+  const pr = S.profiel, soort = t.soort === "film" ? "film" : "series";
+  const hits = (t.th || []).filter(x => x !== "film" && x !== "series" && pr.themas.includes(x));
+  let s = hits.length * 10 + (pr.themas.includes(soort) ? 5 : 0) + ((t.imdb || 6) - 6) * 2;
+  if (pr.geleerd?.nee?.includes(norm(t.t))) s -= 100;
+  const namen = hits.map(id => G.themas.find(x => x.id === id)?.naam).filter(Boolean);
+  return { s, reden: namen, relevant: hits.length > 0 && s >= 8 };
+}
+const stSleutel = it => [it.id, it.dienst, it.soort, it.se || ""].join("|");
+function stKaart(it, t, { reden = [], datum = false } = {}) {
+  const meta = [dienstNaam(it.dienst), t.soort === "film" ? "Film" : it.se ? `Seizoen ${it.se}` : "Reeks", t.j].filter(Boolean).join(" · ");
+  return `<div class="stkaart" role="button" tabindex="0" data-st="${esc(stSleutel(it))}">
+    <span class="poster">${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="pt">${esc(t.t)}</span></span>
+    <span class="tekst">
+      ${datum && it.datum ? `<span class="wanneer">${esc(relDag(it.datum))}</span>` : ""}
+      <span class="titel">${esc(t.t)}</span>
+      <span class="m">${esc(meta)}${t.imdb ? ` · ★ ${t.imdb.toFixed(1)}` : ""}</span>
+      ${t.g?.length ? `<span class="m">${esc(t.g.slice(0, 3).join(", "))}</span>` : ""}
+      ${reden.length ? `<span class="reden">Omdat je houdt van <b>${esc(reden.slice(0, 2).join(", "))}</b></span>` : ""}
+    </span>
+  </div>`;
+}
+async function tekenStreaming() {
+  const el = $("#stInhoud");
+  let D;
+  try { D = await laadStreaming(); }
+  catch (e) { el.innerHTML = `<p class="leeg">Het streamingoverzicht is nog niet beschikbaar. Probeer het later opnieuw.</p>`; return; }
+  const mijn = S.profiel.streaming || [];
+  if (!S.stDienst) S.stDienst = mijn.length ? "mijn" : "alle";
+  const knoppen = [...(mijn.length ? [["mijn", "Mijn diensten"]] : []), ["alle", "Alle diensten"], ...D.diensten.map(d => [d.id, dienstNaam(d.id)])];
+  $("#stDiensten").innerHTML = knoppen.map(([id, n]) => `<button class="pil" data-stdienst="${id}" aria-pressed="${S.stDienst === id}">${esc(n)}${mijn.includes(id) ? " ✓" : ""}</button>`).join("");
+  const binnen = S.stDienst === "mijn" ? new Set(mijn) : S.stDienst === "alle" ? null : new Set([S.stDienst]);
+  const items = D.items.filter(it => (!binnen || binnen.has(it.dienst)) && D.titels[it.id]);
+  const vandaag_ = kalDag();
+  const nieuw = items.filter(it => it.soort === "nieuw" && it.datum <= vandaag_);
+  const komt = items.filter(it => it.soort === "binnenkort" && it.datum >= vandaag_).sort((a, b) => a.datum.localeCompare(b.datum));
+  const pop = items.filter(it => it.soort === "populair");
+
+  let h = "";
+  if (!mijn.length) h += `<div class="setup"><div><h2>Welke diensten heb je?</h2><p>Kies je streamingdiensten, dan zie je hier alleen wat er voor jou nieuw is.</p></div><a href="#profiel" class="knop">Kies je diensten</a></div>`;
+  if (heeftInteresses()) {
+    const gezien = new Set();
+    const tips = [...nieuw.filter(it => it.datum >= isoVan(nu() - 7 * 86400)), ...komt.slice(0, 40), ...pop]
+      .map(it => { const r = stScore(D.titels[it.id]); if (it.soort !== "populair") r.s += 6; return { it, t: D.titels[it.id], r }; })
+      .filter(x => x.r.relevant && !gezien.has(x.it.id) && gezien.add(x.it.id))
+      .sort((a, b) => b.r.s - a.r.s).slice(0, 12);
+    if (tips.length) h += `<div class="blok"><div class="blok-kop"><h2>Voor jou</h2><p>Nieuw, binnenkort of populair, volgens je interesses</p></div>
+      <div class="strij">${tips.map(x => stKaart(x.it, x.t, { reden: x.r.reden, datum: x.it.soort !== "populair" })).join("")}</div></div>`;
+  }
+  const perDag = (lijst, max) => {
+    const groepen = {};
+    for (const it of lijst.slice(0, max)) (groepen[it.datum] ||= []).push(it);
+    return Object.keys(groepen).map(d => `<div class="dagkop">${esc(relDag(d))}</div><div class="stlijst">${groepen[d].map(it => stKaart(it, D.titels[it.id])).join("")}</div>`).join("");
+  };
+  if (komt.length) h += `<div class="blok"><div class="blok-kop"><h2>Binnenkort</h2><p>Met de dag waarop het online komt</p></div>${perDag(komt, 30)}</div>`;
+  const max = S.stMeer ? 400 : 40;
+  h += `<div class="blok"><div class="blok-kop"><h2>Nieuw online</h2></div>${perDag(nieuw, max) || `<p class="leeg">Niets nieuws gevonden voor deze dienst.</p>`}
+    ${nieuw.length > max ? `<button class="knop stil" data-stmeer type="button">Toon alles (${nieuw.length})</button>` : ""}</div>`;
+  if (pop.length) h += `<div class="blok"><div class="blok-kop"><h2>Populair nu</h2></div><div class="stlijst">${pop.slice(0, 24).map(it => stKaart(it, D.titels[it.id])).join("")}</div></div>`;
+  h += `<p class="klein bron">Streaminggegevens van <a href="https://www.justwatch.com/be" target="_blank" rel="noopener">JustWatch</a>, bijgewerkt ${esc(new Date(D.bijgewerkt).toLocaleString("nl-BE", { timeZone: TZ, weekday: "short", hour: "2-digit", minute: "2-digit" }))}.</p>`;
+  el.innerHTML = h;
+}
+async function toonStDetail(k) {
+  const D = await laadStreaming(), [id, dienst, soort, se] = k.split("|");
+  const t = D.titels[id]; if (!t) return;
+  const it = D.items.find(x => stSleutel(x) === k) || { id, dienst, soort, se };
+  const andere = [...new Set(D.items.filter(x => x.id === id && x.dienst !== dienst).map(x => dienstNaam(x.dienst)))];
+  const r = heeftInteresses() ? stScore(t).reden : [];
+  const wanneer = it.soort === "binnenkort" ? `Online vanaf ${relDag(it.datum).toLowerCase()}` : it.soort === "nieuw" ? `Online sinds ${relDag(it.datum).toLowerCase()}` : "Nu te zien";
+  const feiten = [t.soort === "film" ? "Film" : "Reeks", it.se ? `Seizoen ${it.se}` : "", ...(t.g || []), t.j, t.min ? `${t.min} min` : "", t.leeftijd, t.imdb ? `IMDb ${t.imdb.toFixed(1)}` : ""].filter(Boolean);
+  $("#detailIn").innerHTML = `
+    <div class="kopje"><span><b>${esc(dienstNaam(dienst))}</b> · ${esc(wanneer)}</span><button class="sluit" data-sluit>Sluiten</button></div>
+    <div class="stdetail">${t.poster ? `<img src="${esc(t.poster)}" alt="" onerror="this.remove()">` : ""}<div>
+      <h3>${esc(t.t)}</h3>
+      ${t.d ? `<p>${esc(t.d)}</p>` : `<p class="klein">Geen beschrijving beschikbaar.</p>`}
+      ${r.length ? `<p class="klein">Tip omdat je houdt van <b>${esc(r.join(", "))}</b></p>` : ""}
+      ${andere.length ? `<p class="klein">Ook op ${esc(andere.join(", "))}</p>` : ""}
+    </div></div>
+    <div class="feiten">${feiten.map(f => `<span>${esc(f)}</span>`).join("")}</div>
+    <div class="knoppen">
+      ${t.url ? `<a class="knop" href="${esc(t.url)}" target="_blank" rel="noopener">Waar te zien (JustWatch)</a>` : ""}
+      <button class="knop stil" data-stnee="${esc(t.t)}">Niet voor mij</button>
+    </div>`;
+  if (!$("#detail").open) $("#detail").showModal();
+  $("#detail").dataset.k = "";
+}
+
+/* ---------- Onboarding: vragen die een eerste interesseprofiel maken ---------- */
 const TALEN = [
   { id: "nl", naam: "Nederlands", sub: "Vlaamse zenders en NPO, ook ondertitelde reeksen" },
   { id: "en", naam: "Engels", sub: "BBC One, BBC Two, CNN, BBC News" },
@@ -800,15 +942,19 @@ const VRAGEN = [
   { id: "Shows", vraag: "Welke programma's zet je graag op?", uitleg: "Spel, reality, koken en meer." },
   { id: "Onderwerpen", vraag: "Welke onderwerpen boeien je?", uitleg: "Voor documentaires en reportages." },
   { id: "Sport", vraag: "Welke sport volg je?", uitleg: "Kies Geen sport als je er niets van wil zien." },
+  { id: "streaming", vraag: "Welke streamingdiensten heb je?", uitleg: "Dan zie je bij Streaming wat er nieuw is op jouw diensten, op de dag dat het online komt." },
   { id: "programmas", vraag: "Welke programma's wil je zeker niet missen?", uitleg: "Zoek op naam en voeg ze toe aan je favoriete programma's. Elke uitzending komt dan vanzelf op je kijklijst en in je dagelijkse melding." },
   { id: "zenders", vraag: "Wat zijn je voorkeurzenders?", uitleg: "Tik ze aan in volgorde van voorkeur: je eerste keuze weegt het zwaarst. Je tips komen eerst van deze zenders, daarna vullen we aan met andere zenders." }
 ];
 const SPORT_EXTRA = [{ id: "sport", naam: "Andere sport", sub: "Atletiek, basket, darts, snooker…" }, { id: "geen", naam: "Geen sport", sub: "Liever geen sport in mijn tips" }];
 
-const geenTegel = v => `<button class="tegel geenvoorkeur" data-obkeuze="${v.id}|_geen" aria-pressed="${S.ob.geen.has(v.id)}"><b>Geen voorkeur</b><small>Alles is goed, dit telt niet mee</small></button>`;
-const THEMAVRAGEN = () => VRAGEN.filter(v => !["talen", "programmas", "zenders"].includes(v.id));
+const geenTegel = v => v.id === "streaming"
+  ? `<button class="tegel geenvoorkeur" data-obkeuze="${v.id}|_geen" aria-pressed="${S.ob.geen.has(v.id)}"><b>Geen streamingdiensten</b><small>Ik kijk alleen gewone tv</small></button>`
+  : `<button class="tegel geenvoorkeur" data-obkeuze="${v.id}|_geen" aria-pressed="${S.ob.geen.has(v.id)}"><b>Geen voorkeur</b><small>Alles is goed, dit telt niet mee</small></button>`;
+const THEMAVRAGEN = () => VRAGEN.filter(v => !["talen", "streaming", "programmas", "zenders"].includes(v.id));
 function optiesVoor(v) {
   if (v.id === "talen") return TALEN;
+  if (v.id === "streaming") return DIENSTEN;
   const lijst = G.themas.filter(t => t.groep === v.id).map(t => ({ id: t.id, naam: t.naam, sub: UITLEG[t.id] || "" }));
   return v.id === "Sport" ? [...lijst, ...SPORT_EXTRA] : lijst;
 }
@@ -818,6 +964,8 @@ function startOnboarding() {
   const geen = new Set(), terug = pr.onboarding_klaar; // bij opnieuw doen: lege antwoorden = geen voorkeur
   a.talen = new Set(pr.talen.length ? pr.talen : terug ? [] : ["nl"]);
   if (terug && !pr.talen.length) geen.add("talen");
+  a.streaming = new Set(pr.streaming || []);
+  if (terug && !a.streaming.size) geen.add("streaming");
   for (const v of THEMAVRAGEN()) {
     a[v.id] = new Set(optiesVoor(v).map(o => o.id).filter(id => pr.themas.includes(id)));
     if (terug && !a[v.id].size && v.id !== "Sport") geen.add(v.id);
@@ -834,7 +982,7 @@ function obProfiel() {
   const a = S.ob.a, themas = new Set();
   for (const v of THEMAVRAGEN()) for (const id of a[v.id]) if (id !== "geen") themas.add(id);
   if (a.Sport.has("geen")) for (const t of G.themas) if (t.groep === "Sport" || t.id === "sport") themas.delete(t.id);
-  return { talen: S.ob.geen.has("talen") ? [] : [...a.talen], themas: [...themas] };
+  return { talen: S.ob.geen.has("talen") ? [] : [...a.talen], themas: [...themas], streaming: S.ob.geen.has("streaming") ? [] : [...a.streaming] };
 }
 
 function voorgesteldeFavs(talen, themas) {
@@ -944,6 +1092,7 @@ function tekenWelkom() {
     <section><h2>Je naam</h2><label class="vh" for="obNaam">Je naam</label><input id="obNaam" type="text" autocomplete="given-name" placeholder="Je voornaam" value="${esc(S.ob.naam)}"></section>
     <section><h2>Talen</h2><div class="pillen">${talen.map(t => `<span class="pil">${esc(TALEN.find(x => x.id === t)?.naam)}</span>`).join("") || `<span class="klein">Geen voorkeur: je krijgt tips in alle talen.</span>`}</div></section>
     <section><h2>Je interesses</h2><div class="pillen">${namen.map(n => `<span class="pil">${esc(n)}</span>`).join("") || `<span class="klein">Nog geen interesses gekozen. Je krijgt algemene tips.</span>`}</div></section>
+    <section><h2>Streamingdiensten</h2><div class="pillen">${obProfiel().streaming.map(id => `<span class="pil">${esc(dienstNaam(id))}</span>`).join("") || `<span class="klein">Geen gekozen.</span>`}</div></section>
     <section><h2>Voorkeurzenders</h2>
       ${S.ob.geen.has("zenders") ? `<p class="klein" style="margin:0">Geen voorkeur: je tips komen van alle zenders.</p>`
         : S.ob.zenders.length ? "" : `<p class="klein" style="margin:0">Je koos er geen, dus we nemen deze voorstellen. Aanpassen kan bij de vorige vraag of in je profiel.</p>`}
@@ -996,10 +1145,10 @@ async function bewaarObProgs() {
 async function obKlaar(overslaan = false) {
   const p = S.profiel;
   if (!overslaan) {
-    const { talen, themas } = obProfiel();
+    const { talen, themas, streaming } = obProfiel();
     const favs = obFavs(talen, themas);
     await bewaarObProgs();
-    Object.assign(p, { talen, themas, favorieten: favs, naam: S.ob.naam.trim() || p.naam, melding_uur: S.ob.uur, melding_aan: S.ob.meldAan });
+    Object.assign(p, { talen, themas, streaming, favorieten: favs, naam: S.ob.naam.trim() || p.naam, melding_uur: S.ob.uur, melding_aan: S.ob.meldAan });
   }
   p.onboarding_klaar = true;
   try { await OP.bewaarProfiel(p); } catch (e) { toast("Bewaren lukte niet: " + e.message); return; }
@@ -1107,7 +1256,7 @@ function obVolgende() {
 function obTerug() { if (S.ob.stap > 0) { S.ob.stap--; tekenWelkom(); window.scrollTo(0, 0); } }
 
 /* ---------- Navigatie ---------- */
-const VIEWS = ["welkom", "vanavond", "gids", "zenders", "zoeken", "kijklijst", "profiel"];
+const VIEWS = ["welkom", "vanavond", "gids", "zenders", "streaming", "zoeken", "kijklijst", "profiel"];
 let huidig = "vanavond";
 function route() {
   const [v, a] = location.hash.replace("#", "").split("/");
@@ -1122,17 +1271,26 @@ function route() {
   window.scrollTo(0, 0);
 }
 function herteken() {
-  ({ welkom: tekenWelkom, vanavond: tekenVanavond, gids: tekenGids, zenders: tekenZenders, zoeken: tekenZoeken, kijklijst: tekenKijklijst, profiel: tekenProfiel })[huidig]();
-  if ($("#detail").open) toonDetail($("#detail").dataset.k);
+  ({ welkom: tekenWelkom, vanavond: tekenVanavond, gids: tekenGids, zenders: tekenZenders, streaming: tekenStreaming, zoeken: tekenZoeken, kijklijst: tekenKijklijst, profiel: tekenProfiel })[huidig]();
+  if ($("#detail").open && $("#detail").dataset.k) toonDetail($("#detail").dataset.k);
 }
 
 /* ---------- Gebeurtenissen ---------- */
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stdienst],[data-stmeer],[data-st],[data-stnee],[data-dienst],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.stdienst) { S.stDienst = d.stdienst; S.stMeer = false; return tekenStreaming(); }
+    if (d.stmeer !== undefined) { S.stMeer = true; return tekenStreaming(); }
+    if (d.st) return toonStDetail(d.st);
+    if (d.stnee) {
+      const L = S.profiel.geleerd = { g: {}, c: {}, nee: [], n: 0, ...(S.profiel.geleerd || {}) };
+      L.nee = [...new Set([norm(d.stnee), ...(L.nee || [])])].slice(0, 150);
+      bewaarProfiel(); $("#detail").close(); toast(`Je krijgt ${d.stnee} niet meer als tip`); return herteken();
+    }
+    if (d.dienst) { const l = S.profiel.streaming || []; S.profiel.streaming = l.includes(d.dienst) ? l.filter(x => x !== d.dienst) : [...l, d.dienst]; S.stDienst = null; bewaarProfiel(); return tekenProfiel(); }
     if (d.meerzend !== undefined) { S.alleZendersProfiel = !S.alleZendersProfiel; return tekenProfiel(); }
     if (d.agenda) { const p = vind(d.agenda); if (p) bewaarIcs([p], p.t); return; }
     if (d.agendaalles !== undefined) { const l = komendeKijklijst(); if (l.length) bewaarIcs(l, "Zapper kijklijst"); else toast("Je kijklijst is leeg"); return; }
@@ -1162,6 +1320,7 @@ function koppel() {
   });
   document.addEventListener("keydown", e => {
     if ((e.key === "Enter" || e.key === " ") && e.target.matches("[role=button][data-p]")) { e.preventDefault(); toonDetail(e.target.dataset.p); }
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[role=button][data-st]")) { e.preventDefault(); toonStDetail(e.target.dataset.st); }
   });
   $("#detail").addEventListener("click", e => { if (e.target === $("#detail")) $("#detail").close(); });
   $("#gidsVan").addEventListener("change", e => { S.gidsVan = +e.target.value; bewaarUi(); tekenGids(); });

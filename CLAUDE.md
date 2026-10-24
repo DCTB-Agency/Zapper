@@ -25,7 +25,7 @@ meldingen via web-push vanuit de PWA.
   (push + offline), `manifest.webmanifest`, `config.js` (publieke Supabase-URL/anon key/VAPID public key),
   `themas.json` (interessethema's → regex op Telenet-genres, met optioneel `ook` = tweede genre dat ook
   moet voorkomen, en `groep` = de onboardingvraag; gedeeld met `melding.py`).
-  Onboarding (`#welkom`, blok "Onboarding" in `app.js`): 8 vragen, elk met "Geen voorkeur" (`S.ob.geen`, sluit
+  Onboarding (`#welkom`, blok "Onboarding" in `app.js`): 9 vragen (o.a. `streaming`), elk met "Geen voorkeur" (`S.ob.geen`, sluit
   de andere keuzes uit; leeg = telt niet mee). Vraag "programmas" zoekt titels (`zoekTitels()`, ook gebruikt op de
   Kijklijst) en bewaart ze als kijklijst-rijen met soort `reeks` (in de UI "favoriete programma's").
   Antwoorden → `profielen.talen`, `profielen.themas`, `profielen.favorieten` (in volgorde) en reeksen.
@@ -45,6 +45,15 @@ meldingen via web-push vanuit de PWA.
   Zonder `SUPABASE_URL` draait de app in **demo-modus** (`LokaleOpslag`, localStorage).
 - `supabase/schema.sql`: tabellen `profielen`, `kijklijst` (soort `uitzending` of `reeks`),
   `push_abonnementen`, `meldingen_log`; RLS op alles; RPC `registreer_toestel`.
+- `streaming.py` (alleen stdlib): JustWatch GraphQL (`https://apis.justwatch.com/graphql`, onofficieel, geen sleutel,
+  land BE) → `web/data/streaming.json` met `diensten`, `titels` (id → titel, soort, genres, `th` = thema-id's, poster, url)
+  en `items` (`soort` nieuw/binnenkort/populair, `dienst`, `datum`, `se`). `newTitles` (pageType NEW per dag, UPCOMING met
+  `upcomingReleases`) en `popularTitles`. Diensten zonder datums bij JustWatch (VTM GO, Telenet): diff met
+  `.cache/streaming-gezien.json`. De dienstcodes staan dubbel: `DIENSTEN` in `streaming.py` en in `web/app.js`.
+  Profielveld `profielen.streaming` (text[]; `supabase/update-streaming.sql`). Zonder die kolom bewaart de app
+  de keuze in localStorage (`SupaOpslag.bewaarProfiel`).
+- Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
+  per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).
 - `melding.py`: draait elk uur 14u-21u (`meldingen.yml`), stuurt per gebruiker één melding per dag
   zodra `melding_uur` bereikt is. Gebruikt de service_role-sleutel en `pywebpush`.
   **De scorefunctie staat dubbel**: `score()` in `web/app.js` en `score()` in `melding.py`. Pas ze samen aan.
@@ -79,7 +88,15 @@ python3 gids.py && cd web && python3 -m http.server 8765
 
 Na wijzigingen aan bestanden in `web/`: verhoog `VERSIE` in `web/sw.js`, anders blijven toestellen een oude schil tonen.
 
-## Status (19 oktober 2026)
+## Status (24 oktober 2026)
+
+Online op https://dctb-agency.github.io/Zapper/ (publieke repo, Pages via Actions). Supabase-project
+`wevtsetlcfbphixczmra` gekoppeld in `config.js`; GitHub-secrets en `SITE_URL` staan. Nieuw en lokaal getest in demo-modus:
+tips per tijdslot, streamingvraag in onboarding en profiel, tabblad Streaming (gsm + desktop), streamingregel in `melding.py`.
+Nog door de gebruiker te doen: `supabase/update-streaming.sql` uitvoeren; inschrijven uitzetten in Supabase.
+Supabase' ingebouwde mail haalt maar enkele mails per uur: aanbevolen SMTP (Resend/Brevo).
+
+### Eerder (19 oktober 2026)
 
 Klaar en lokaal getest in demo-modus (desktop + gsm-breedte): onboarding (8 vragen met Geen voorkeur, favoriete programma's zoeken, voorkeurzenders in volgorde + samenvatting), programma's toevoegen op de Kijklijst, agenda-export (.ics + Google Agenda, ook de hele kijklijst), lerend profiel en Niet voor mij, zoekveld op Vanavond, Vanavond met tips, Gids-rooster, Zenders,
 Zoeken (dagen, uren, zenders, thema's, typfouten), Kijklijst (uitzending + reeks volgen), Profiel,

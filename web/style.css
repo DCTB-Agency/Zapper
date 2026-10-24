@@ -244,6 +244,37 @@ body.ob-modus .inhoud > .legal { display: none; }
 .kaart .reden { font-size: var(--t-xs); color: var(--muted); }
 .kaart .reden b { color: var(--ink); font-weight: 600; }
 
+/* Streaming */
+#stDiensten { margin-bottom: var(--s4); }
+.strij { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; gap: var(--s3); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--s1); margin-right: calc(-1 * var(--gutter-r)); padding-right: var(--gutter-r); }
+.strij .stkaart { scroll-snap-align: start; }
+.strij { margin-bottom: var(--s3); }
+.stlijst { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); margin-bottom: var(--s3); }
+.stkaart { display: flex; gap: var(--s3); padding: var(--s2); border: 1px solid var(--line); border-radius: var(--r-l); background: var(--surface); cursor: pointer; min-width: 0; }
+.stkaart:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stkaart .poster { flex: none; position: relative; width: 64px; aspect-ratio: 2 / 3; border-radius: var(--r-m); overflow: hidden; background: var(--accent-soft); }
+.stkaart .poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stkaart .poster .pt { display: block; padding: var(--s1); font-size: var(--t-xs); line-height: 1.2; color: var(--muted); overflow: hidden; }
+.stkaart .tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stkaart .wanneer { font: 500 var(--t-xs) var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+.stkaart .titel { font-weight: 700; font-size: var(--t-m); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.stkaart .m { font-size: var(--t-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stkaart .reden { font-size: var(--t-xs); color: var(--muted); }
+.stkaart .reden b { color: var(--ink); font-weight: 600; }
+.stdetail { display: flex; gap: var(--s4); align-items: flex-start; }
+.stdetail img { flex: none; width: 96px; border-radius: var(--r-m); }
+.stdetail h3 { margin-top: 0; }
+.bron { margin-top: var(--s5); }
+@media (hover: hover) { .stkaart:hover { border-color: var(--accent); } }
+
+/* Tips per tijdslot: op de gsm schuif je per tijdstip opzij door de zenders */
+.slots { display: flex; flex-direction: column; gap: var(--s5); }
+.slotkop { display: flex; align-items: baseline; gap: var(--s3); margin-bottom: var(--s2); }
+.slotkop b { font: 500 var(--t-l) var(--mono); color: var(--accent); }
+.slotkop span { font-size: var(--t-xs); color: var(--muted); }
+.slot .kaarten { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--s1); margin-right: calc(-1 * var(--gutter-r)); padding-right: var(--gutter-r); }
+.slot .kaart { scroll-snap-align: start; }
+
 /* Lijstitems (nu op tv, zoekresultaten, kijklijst) */
 .lijst, .resultaten { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
 .item { display: grid; grid-template-columns: 52px minmax(0, 1fr) var(--tik); gap: var(--s3); align-items: center; padding: var(--s2) var(--s1) var(--s2) var(--s3); min-height: 64px; }
@@ -446,6 +477,9 @@ dialog::backdrop { background: var(--scrim); }
   .setup { flex-direction: row; align-items: center; justify-content: space-between; padding: var(--s4) var(--s5); }
 
   .kaarten { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .strij { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); grid-auto-columns: auto; overflow: visible; margin-right: 0; padding-right: 0; }
+  .stlijst { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .slot .kaarten { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); grid-auto-columns: auto; overflow: visible; margin-right: 0; padding-right: 0; }
   .lijst { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
   .tegels { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
   .zendertegels { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
