@@ -80,12 +80,33 @@ class LokaleOpslag {
 
 class SupaOpslag {
   constructor(sb, user) { this.sb = sb; this.uid = user.id; this.email = user.email; this.demo = false; }
+  /* Kopie van je profiel in deze browser: als laden even mislukt (bv. een verlopen sessie), blijft alles staan. */
+  get cacheSleutel() { return "avondgids.profiel." + this.uid; }
+  bewaarKopie(p) { try { localStorage.setItem(this.cacheSleutel, JSON.stringify(p)); } catch (_) {} }
+  kopie() { try { return JSON.parse(localStorage.getItem(this.cacheSleutel)); } catch (_) { return null; } }
+  /* Een vraag aan de server, tot 3 keer: bij een verlopen sessie eerst de sessie vernieuwen. */
+  async met(vraag) {
+    let r;
+    for (let poging = 0; poging < 3; poging++) {
+      r = await vraag();
+      if (!r.error) return r;
+      await this.sb.auth.refreshSession().catch(() => {});
+      await new Promise(w => setTimeout(w, 600 * (poging + 1)));
+    }
+    return r;
+  }
   async profiel() {
-    const { data, error } = await this.sb.from("profielen").select("*").eq("user_id", this.uid).maybeSingle();
-    if (error) throw error;
+    const { data, error } = await this.met(() => this.sb.from("profielen").select("*").eq("user_id", this.uid).maybeSingle());
+    if (error) {
+      const k = this.kopie();
+      if (k) { toast("Je profiel komt uit deze browser; verbinding met de server lukt even niet"); return { ...STANDAARD, ...k }; }
+      throw error;
+    }
     if (data) {
       if (!("streaming" in data)) try { data.streaming = JSON.parse(localStorage.getItem("avondgids.streaming")) || []; } catch (_) {}
-      return { ...STANDAARD, ...data };
+      const p = { ...STANDAARD, ...data };
+      this.bewaarKopie(p);
+      return p;
     }
     const p = { ...STANDAARD, naam: (this.email || "").split("@")[0].split(/[._-]/)[0].replace(/^./, c => c.toUpperCase()) };
     await this.bewaarProfiel(p);
@@ -102,8 +123,9 @@ class SupaOpslag {
       ({ error } = await this.sb.from("profielen").upsert(rij));
     }
     if (error) throw error;
+    this.bewaarKopie(p);
   }
-  async kijklijst() { const { data, error } = await this.sb.from("kijklijst").select("*"); if (error) throw error; return data; }
+  async kijklijst() { const { data, error } = await this.met(() => this.sb.from("kijklijst").select("*")); if (error) throw error; return data; }
   async voegToe(item) { const { data, error } = await this.sb.from("kijklijst").insert(item).select().single(); if (error) throw error; return data; }
   async verwijder(id) { const { error } = await this.sb.from("kijklijst").delete().eq("id", id); if (error) throw error; }
   async registreerToestel(sub, toestel) {
@@ -1456,14 +1478,22 @@ async function startApp(opslag) {
   $("#demoBalk").hidden = !OP.demo;
   try { await laadIndex(); }
   catch (e) { document.querySelector(".inhoud").innerHTML = `<p class="leeg">De tv-gids kon niet geladen worden (${esc(e.message)}). Probeer het later opnieuw.</p>`; return; }
+  let laadFout = null;
   try { [S.profiel, S.kijk] = await Promise.all([OP.profiel(), OP.kijklijst()]); }
-  catch (e) { toast("Je voorkeuren konden niet geladen worden: " + e.message); }
+  catch (e) { laadFout = e; }
+  if (laadFout) {
+    // Nooit de vragenlijst tonen omdat laden mislukte: dan zou je je antwoorden opnieuw moeten geven.
+    document.querySelector(".inhoud").innerHTML = `<div class="blok"><p class="leeg">Je profiel kon niet geladen worden (${esc(laadFout.message)}).<br>
+      <button class="knop" type="button" onclick="location.reload()">Opnieuw proberen</button></p></div>`;
+    return;
+  }
   S.profiel = { ...STANDAARD, ...S.profiel };
   $("#initiaal").textContent = initiaal();
   $("#klok").textContent = tijd(nu());
   await laadDag(vandaag());
   ruimKijklijstOp();
   if (!S.profiel.onboarding_klaar && !heeftInteresses()) location.hash = "welkom";
+  else if (location.hash.startsWith("#welkom")) location.hash = "vanavond"; // bv. een oude bladwijzer of herstelde tab
   koppel();
   route();
   laadAlles().then(() => { G.alles = true; });
