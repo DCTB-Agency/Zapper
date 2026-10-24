@@ -244,6 +244,9 @@ def main():
         kijk = sb.req("GET", f"kijklijst?user_id=eq.{uid}&select=*")
         msg = melding_voor(prof, kijk, progs, themas, index["zenders"], nu, stream)
         wie = prof.get("naam") or uid[:8]
+        if args.droog:
+            log(f"  {wie}: vragenlijst {'ingevuld' if prof.get('onboarding_klaar') else 'NIET ingevuld'}, "
+                f"{len(prof.get('themas') or [])} interesses, {len(prof.get('streaming') or [])} streamingdiensten")
         if not msg:
             log(f"- {wie}: niets voor vanavond")
         else:
