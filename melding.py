@@ -54,8 +54,10 @@ def lees_json(naam):
 class Supabase:
     def __init__(self):
         self.url = os.environ["SUPABASE_URL"].rstrip("/") + "/rest/v1/"
-        sleutel = os.environ["SUPABASE_SERVICE_KEY"]
-        self.h = {"apikey": sleutel, "Authorization": f"Bearer {sleutel}", "Content-Type": "application/json"}
+        sleutel = os.environ["SUPABASE_SERVICE_KEY"].strip()
+        self.h = {"apikey": sleutel, "Content-Type": "application/json"}
+        if sleutel.startswith("eyJ"):  # legacy service_role (JWT); een nieuwe sb_secret_-sleutel werkt alleen als apikey
+            self.h["Authorization"] = f"Bearer {sleutel}"
 
     def req(self, methode, pad, body=None, extra=None):
         data = json.dumps(body).encode() if body is not None else None
