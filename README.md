@@ -25,11 +25,14 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   Hayu, Crunchyroll en MUBI, met de dag waarop het online kwam, wat **binnenkort** komt (met datum) en wat populair is.
   Bovenaan tips volgens je interesses. De gegevens komen van JustWatch en worden 4 keer per dag vernieuwd.
   Wat vandaag nieuw is op jouw diensten, staat ook in je dagelijkse melding.
+  Met het **zoekveld** vind je ook oudere films en reeksen (de ~4.000 populairste titels van alle diensten, typfouten mogen),
+  met op welke dienst ze staan. Niet gevonden? Eén tik zoekt verder op JustWatch.
 - **Gids**: tijdrooster per dag, filter op zendergroep of favorieten.
 - **Zenders**: het volledige dagprogramma van één zender.
 - **Zoeken**: slim zoeken, volledig in de browser (geen betalende AI-dienst). Begrijpt dagen
   (*vanavond, morgen, vrijdag, weekend*), uren (*na 21u, voor 20u, om 20u30*), zenders (*op canvas, vtm*),
   soorten (*film, live, nieuw, voetbal, misdaad…*) en verdraagt typfouten (*verader* → *De Verraders*).
+  Films en reeksen op streamingdiensten verschijnen er ook, in een apart blok **Op streaming**.
 - **Kijklijst**: bewaar een uitzending, of maak er een favoriet programma van zodat elke uitzending vanzelf meetelt.
 - **Agenda**: zet een uitzending in de agenda van je gsm (bestand voor iPhone, Android en Outlook, of
   rechtstreeks in Google Agenda), met een herinnering 10 minuten voor de start. Op de kijklijst zet

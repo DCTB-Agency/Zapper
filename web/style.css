@@ -246,6 +246,8 @@ body.ob-modus .inhoud > .legal { display: none; }
 
 /* Streaming */
 #stDiensten { margin-bottom: var(--s4); }
+#stZoekForm { margin-bottom: var(--s4); }
+.stzoekblok { margin: var(--s4) 0 var(--s5); }
 .strij { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; gap: var(--s3); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--s1); margin-right: calc(-1 * var(--gutter-r)); padding-right: var(--gutter-r); }
 .strij .stkaart { scroll-snap-align: start; }
 .strij { margin-bottom: var(--s3); }

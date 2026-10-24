@@ -10,6 +10,8 @@ web/data/streaming.json met per titel de dienst en de datum waarop hij online kw
   Die lijst staat in .cache/streaming-gezien.json (in Actions bewaard met actions/cache).
 - Binnenkort: titels met een aangekondigde datum.
 - Populair: de top per dienst.
+- Zoeken: web/data/streaming-zoek.json met de populairste titels per dienst (alleen titel,
+  jaar, diensten, poster), zodat je in de app ook oudere titels vindt.
 
     python3 streaming.py
 """
@@ -25,9 +27,11 @@ API = "https://apis.justwatch.com/graphql"
 TZ = ZoneInfo("Europe/Brussels")
 HIER = Path(__file__).resolve().parent
 UIT = HIER / "web" / "data" / "streaming.json"
+ZOEK = HIER / "web" / "data" / "streaming-zoek.json"   # klein zoekregister, alleen geladen als je zoekt
 GEZIEN = HIER / ".cache" / "streaming-gezien.json"
 DAGEN_TERUG = 21      # hoeveel dagen "nieuw" we tonen
 POPULAIR = 40         # titels per dienst in "populair"
+ZOEK_PER_DIENST = 500  # zoekregister: de populairste titels per dienst
 MAX_NIEUW = 80        # per dienst: Prime Video en Crunchyroll zetten honderden titels per maand online
 
 # JustWatch-code → naam in de app. De volgorde is de volgorde in de app.
@@ -170,6 +174,17 @@ def main():
 
     log("Populair per dienst")
     gezien = json.loads(GEZIEN.read_text()) if GEZIEN.exists() else {}
+    register = {}  # id → zoekrij
+
+    def registreer(node, code):
+        t = titel(node)
+        if not t:
+            return
+        r = register.setdefault(t["id"], {"i": t["id"], "t": t["t"], "s": "f" if t["soort"] == "film" else "r",
+                                          "j": t["j"], "p": t["poster"], "u": t["url"], "d": []})
+        if code not in r["d"]:
+            r["d"].append(code)
+
     for code in codes:
         try:
             pop = vraag(Q_POP, p=[code], n=POPULAIR, na=None)["popularTitles"]
@@ -178,6 +193,11 @@ def main():
             continue
         for e in pop["edges"]:
             bewaar(e["node"], "populair", code, None)
+        try:
+            for e in alle_paginas(Q_POP, "popularTitles", max_paginas=ZOEK_PER_DIENST // 100, p=[code], n=100):
+                registreer(e["node"], code)
+        except Exception as e:
+            log(f"  zoekregister {code}: {e}")
         # Diensten zonder datums bij JustWatch: zelf bijhouden wat er nieuw bijkomt.
         if code in met_datum or pop["totalCount"] > 3000:
             continue
@@ -218,6 +238,20 @@ def main():
         "titels": {k: {a: b for a, b in v.items() if b not in (None, "", [])} for k, v in titels.items()},
         "items": rijen,
     }, ensure_ascii=False, separators=(",", ":")))
+    # Alles wat in het overzicht staat, moet je ook kunnen vinden.
+    for it in rijen:
+        t = titels.get(it["id"])
+        if t:
+            r = register.setdefault(it["id"], {"i": it["id"], "t": t["t"], "s": "f" if t["soort"] == "film" else "r",
+                                               "j": t.get("j"), "p": t.get("poster"), "u": t.get("url"), "d": []})
+            if it["dienst"] not in r["d"]:
+                r["d"].append(it["dienst"])
+    for r in register.values():  # korter: de app zet de domeinnaam er weer voor
+        r["p"] = (r["p"] or "").replace("https://images.justwatch.com", "")
+        r["u"] = (r["u"] or "").replace("https://www.justwatch.com", "")
+    ZOEK.write_text(json.dumps([{k: v for k, v in r.items() if v not in (None, "", [])} for r in register.values()],
+                               ensure_ascii=False, separators=(",", ":")))
+    log(f"Zoekregister: {len(register)} titels ({ZOEK.stat().st_size // 1024} kB)")
     GEZIEN.parent.mkdir(parents=True, exist_ok=True)
     GEZIEN.write_text(json.dumps(gezien))
     tel = {s: sum(1 for r in rijen if r["soort"] == s) for s in ("nieuw", "binnenkort", "populair")}

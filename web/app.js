@@ -604,10 +604,12 @@ async function tekenZoeken() {
   $("#zoekHulp").innerHTML = VOORBEELDEN.map(v => `<button class="pil" data-voorbeeld="${esc(v)}">${esc(v)}</button>`).join("");
   const q = S.zoek.trim();
   if ($("#zoekInput").value !== S.zoek) $("#zoekInput").value = S.zoek;
+  if (!q) $("#zoekStreaming").innerHTML = "";
+  else stZoekBlok(q, 4).then(h => { if (S.zoek.trim() === q) $("#zoekStreaming").innerHTML = h; });
   if (!q) { $("#zoekBegrip").innerHTML = ""; $("#zoekResultaten").innerHTML = `<p class="leeg">Zoek op titel, persoon, genre, zender, dag of uur, voor de komende ${G.index.dagen.length} dagen.<br>Typfouten mogen: <i>verader</i> vindt ook <i>De Verraders</i>.</p>`; return; }
   if (!G.alles) { $("#zoekResultaten").innerHTML = `<p class="leeg">De gids van de komende dagen wordt geladen…</p>`; await laadAlles(); G.alles = true; }
   const { f, res, bijna } = zoek(q);
-  $("#zoekBegrip").innerHTML = (f.labels.length ? "Filters: " + f.labels.map(l => `<span class="chip">${esc(l)}</span>`).join(" ") + " · " : "") + `${res.length === 120 ? "120+" : res.length} resultaten` + (bijna ? " · geen exacte treffer, dit lijkt er het meest op" : "");
+  $("#zoekBegrip").innerHTML = (f.labels.length ? "Filters: " + f.labels.map(l => `<span class="chip">${esc(l)}</span>`).join(" ") + " · " : "") + `${res.length === 120 ? "120+" : res.length} op tv` + (bijna ? " · geen exacte treffer, dit lijkt er het meest op" : "");
   if (!res.length) { $("#zoekResultaten").innerHTML = `<p class="leeg">Niets gevonden voor “${esc(q)}”. Probeer minder woorden of een andere dag.</p>`; return; }
   const m = markeerder(f);
   const perDag = {};
@@ -629,7 +631,9 @@ async function tekenSnelZoek() {
   const aantal = res.length === 120 ? "120+" : res.length;
   el.innerHTML = `<div class="blok-kop"><h2>Gevonden</h2>${res.length > 6 ? `<button class="tekstknop" data-allezoek type="button">Alle ${aantal} resultaten</button>` : ""}</div>
     ${f.labels.length || bijna ? `<div class="begrip">${f.labels.map(l => `<span class="chip">${esc(l)}</span>`).join(" ")}${bijna ? " geen exacte treffer, dit lijkt er het meest op" : ""}</div>` : ""}
-    <div class="resultaten">${res.slice(0, 6).map(x => item(x.p, { metDag: true, markeer: m })).join("") || `<p class="leeg">Niets gevonden voor “${esc(q)}”.</p>`}</div>`;
+    <div class="resultaten">${res.slice(0, 6).map(x => item(x.p, { metDag: true, markeer: m })).join("") || `<p class="leeg">Niets gevonden op tv voor “${esc(q)}”.</p>`}</div>`;
+  const st = await stZoekBlok(q, 3);
+  if ($("#snelZoek").value.trim() === q && st) el.insertAdjacentHTML("beforeend", st);
 }
 
 /* ---------- Kijklijst ---------- */
@@ -851,8 +855,89 @@ function stKaart(it, t, { reden = [], datum = false } = {}) {
     </span>
   </div>`;
 }
+/* Zoeken in streaming: web/data/streaming-zoek.json (populairste titels per dienst + alles uit het overzicht).
+   Rij: i = id, t = titel, s = f(ilm)/r(eeks), j = jaar, p = posterpad, u = JustWatch-pad, d = dienstcodes. */
+async function laadStZoek() {
+  if (!G.stZoek) G.stZoek = haal("data/streaming-zoek.json").then(l => l.map(r => ({ ...r, woorden: norm(r.t).split(" ") })))
+    .catch(e => { G.stZoek = null; throw e; });
+  return G.stZoek;
+}
+function stZoek(lijst, q, max = 30) {
+  const ws = norm(q).split(" ").filter(w => w && !STOP.has(w));
+  if (!ws.length) return [];
+  const mijn = new Set(S.profiel.streaming || []), res = [];
+  lijst.forEach((r, volgorde) => {
+    let s = 0;
+    for (const w of ws) {
+      let best = 0;
+      for (const woord of r.woorden) {
+        if (woord === w) best = Math.max(best, 3);
+        else if (woord.startsWith(w)) best = Math.max(best, 2);
+        else if (w.length >= 4) { const fout = w.length >= 7 ? 2 : 1; if (afstand(w, woord.slice(0, w.length + 1), fout) <= fout) best = Math.max(best, 1); }
+      }
+      if (!best) return;
+      s += best;
+    }
+    if (norm(r.t) === norm(q)) s += 5; else if (norm(r.t).startsWith(norm(q))) s += 3;
+    if (r.d.some(d => mijn.has(d))) s += 2;
+    res.push({ r, s: s - volgorde / 1e5 });
+  });
+  return res.sort((a, b) => b.s - a.s).slice(0, max).map(x => x.r);
+}
+const jwLink = q => `https://www.justwatch.com/be/zoeken?q=${encodeURIComponent(q)}`;
+function stZoekKaart(r) {
+  const mijn = S.profiel.streaming || [];
+  const diensten = [...r.d].sort((a, b) => mijn.includes(b) - mijn.includes(a)).map(d => dienstNaam(d) + (mijn.includes(d) ? " ✓" : ""));
+  return `<div class="stkaart" role="button" tabindex="0" data-stz="${esc(r.i)}">
+    <span class="poster">${r.p ? `<img src="https://images.justwatch.com${esc(r.p)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="pt">${esc(r.t)}</span></span>
+    <span class="tekst">
+      <span class="titel">${esc(r.t)}</span>
+      <span class="m">${r.s === "f" ? "Film" : "Reeks"}${r.j ? ` · ${r.j}` : ""}</span>
+      <span class="m">${esc(diensten.join(", "))}</span>
+    </span>
+  </div>`;
+}
+async function toonStZoekDetail(id) {
+  const D = await laadStreaming().catch(() => null);
+  const it = D?.titels[id] && D.items.find(x => x.id === id);
+  if (it) return toonStDetail(stSleutel(it));
+  const r = (await laadStZoek()).find(x => x.i === id); if (!r) return;
+  $("#detailIn").innerHTML = `
+    <div class="kopje"><span><b>${esc(r.d.map(dienstNaam).join(", "))}</b></span><button class="sluit" data-sluit>Sluiten</button></div>
+    <div class="stdetail">${r.p ? `<img src="https://images.justwatch.com${esc(r.p)}" alt="" onerror="this.remove()">` : ""}<div>
+      <h3>${esc(r.t)}</h3>
+      <p class="klein">${r.s === "f" ? "Film" : "Reeks"}${r.j ? ` uit ${r.j}` : ""}. Te zien op ${esc(r.d.map(dienstNaam).join(", "))}.</p>
+    </div></div>
+    <div class="knoppen">${r.u ? `<a class="knop" href="https://www.justwatch.com${esc(r.u)}" target="_blank" rel="noopener">Waar te zien (JustWatch)</a>` : ""}</div>`;
+  if (!$("#detail").open) $("#detail").showModal();
+  $("#detail").dataset.k = "";
+}
+/* Streamingtreffers als blok onder de tv-resultaten (Zoeken en het zoekveld op Vanavond). */
+async function stZoekBlok(q, max) {
+  let lijst;
+  try { lijst = await laadStZoek(); } catch (_) { return ""; }
+  const res = stZoek(lijst, q, max + 1);
+  if (!res.length) return "";
+  return `<div class="blok stzoekblok"><div class="blok-kop"><h2>Op streaming</h2><button class="tekstknop" data-stzoekmeer="${esc(q)}" type="button">${res.length > max ? "Meer op streaming" : "Open Streaming"}</button></div>
+    <div class="stlijst">${res.slice(0, max).map(stZoekKaart).join("")}</div></div>`;
+}
+
 async function tekenStreaming() {
   const el = $("#stInhoud");
+  const q = (S.stZoek || "").trim();
+  if ($("#stZoek").value !== (S.stZoek || "")) $("#stZoek").value = S.stZoek || "";
+  $("#stDiensten").hidden = !!q;
+  if (q) {
+    el.innerHTML = `<p class="leeg">Zoeken…</p>`;
+    let lijst;
+    try { lijst = await laadStZoek(); } catch (_) { el.innerHTML = `<p class="leeg">Zoeken in streaming lukt nu niet. <a href="${esc(jwLink(q))}" target="_blank" rel="noopener">Zoek op JustWatch</a>.</p>`; return; }
+    if ((S.stZoek || "").trim() !== q) return; // intussen verder getypt
+    const res = stZoek(lijst, q);
+    el.innerHTML = `<div class="blok"><div class="blok-kop"><h2>${res.length ? `${res.length === 30 ? "30+" : res.length} gevonden` : "Niets gevonden"}</h2></div>
+      ${res.length ? `<div class="stlijst">${res.map(stZoekKaart).join("")}</div>` : `<p class="leeg">Niets gevonden voor “${esc(q)}” bij de populairste titels.</p>`}
+      <p class="klein">Niet wat je zoekt? <a href="${esc(jwLink(q))}" target="_blank" rel="noopener">Zoek “${esc(q)}” op JustWatch</a>, daar staat de volledige catalogus.</p></div>`;
+    return;
+  }
   let D;
   try { D = await laadStreaming(); }
   catch (e) { el.innerHTML = `<p class="leeg">Het streamingoverzicht is nog niet beschikbaar. Probeer het later opnieuw.</p>`; return; }
@@ -1279,12 +1364,14 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stdienst],[data-stmeer],[data-st],[data-stnee],[data-dienst],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stdienst],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
     if (!t) return;
     const d = t.dataset;
     if (d.stdienst) { S.stDienst = d.stdienst; S.stMeer = false; return tekenStreaming(); }
     if (d.stmeer !== undefined) { S.stMeer = true; return tekenStreaming(); }
     if (d.st) return toonStDetail(d.st);
+    if (d.stz) return toonStZoekDetail(d.stz);
+    if (d.stzoekmeer) { S.stZoek = d.stzoekmeer; location.hash = "streaming"; return; }
     if (d.stnee) {
       const L = S.profiel.geleerd = { g: {}, c: {}, nee: [], n: 0, ...(S.profiel.geleerd || {}) };
       L.nee = [...new Set([norm(d.stnee), ...(L.nee || [])])].slice(0, 150);
@@ -1321,10 +1408,14 @@ function koppel() {
   document.addEventListener("keydown", e => {
     if ((e.key === "Enter" || e.key === " ") && e.target.matches("[role=button][data-p]")) { e.preventDefault(); toonDetail(e.target.dataset.p); }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches("[role=button][data-st]")) { e.preventDefault(); toonStDetail(e.target.dataset.st); }
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[role=button][data-stz]")) { e.preventDefault(); toonStZoekDetail(e.target.dataset.stz); }
   });
   $("#detail").addEventListener("click", e => { if (e.target === $("#detail")) $("#detail").close(); });
   $("#gidsVan").addEventListener("change", e => { S.gidsVan = +e.target.value; bewaarUi(); tekenGids(); });
   $("#zenderFilter").addEventListener("input", e => { S.zenderFilter = e.target.value; tekenZenders(); });
+  let stt;
+  $("#stZoek").addEventListener("input", e => { S.stZoek = e.target.value; clearTimeout(stt); stt = setTimeout(tekenStreaming, 180); });
+  $("#stZoekForm").addEventListener("submit", e => { e.preventDefault(); $("#stZoek").blur(); tekenStreaming(); });
   let zt;
   $("#zoekInput").addEventListener("input", e => { S.zoek = e.target.value; clearTimeout(zt); zt = setTimeout(tekenZoeken, 180); });
   let st;
