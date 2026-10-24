@@ -218,6 +218,10 @@ body.ob-modus .inhoud > .legal { display: none; }
 .login-kaart img { border-radius: var(--r-l); }
 .login-kaart h1 { font: 800 52px/.9 var(--display); letter-spacing: .01em; }
 .login-kaart form { display: flex; flex-direction: column; gap: var(--s2); }
+.knop.google { width: 100%; gap: var(--s3); background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.knop.google svg { width: 20px; height: 20px; flex: none; }
+.login-kaart .of { display: flex; align-items: center; gap: var(--s3); margin: var(--s2) 0 0; }
+.login-kaart .of::before, .login-kaart .of::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 
 /* ---------- Vanavond ---------- */
 .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s3); flex-wrap: wrap; }

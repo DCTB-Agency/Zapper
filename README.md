@@ -91,8 +91,24 @@ Reken op een half uur. Je hebt een GitHub-account en een (gratis) Supabase-accou
 5. **Authentication → Users → Invite user** voor elk familielid of elke vriend.
 6. **Project Settings → API**: noteer de *Project URL*, de *anon public*-sleutel en de *service_role*-sleutel.
 
+7. *(Aanbevolen)* **Inloggen met Google**: dan zijn er geen inlogmails nodig. Zie *Inloggen met Google* hieronder.
+   Zodra Google aan staat in Supabase, verschijnt de knop vanzelf op het inlogscherm.
+
 > De ingebouwde e-mail van Supabase verstuurt maar een paar mails per uur. Voor een kleine groep
 > volstaat dat. Wil je meer, koppel dan bij **Authentication → SMTP** een gratis dienst zoals Resend of Brevo.
+
+### Inloggen met Google
+
+1. Ga naar [console.cloud.google.com](https://console.cloud.google.com) en maak een project, bv. `Zapper`.
+2. **APIs & Services → OAuth consent screen**: type *External*, app-naam `Zapper`, je e-mailadres. Zet de app
+   daarna op **In production** (anders kunnen alleen testgebruikers inloggen).
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID**, type *Web application*.
+   Bij **Authorized redirect URIs**: `https://<project>.supabase.co/auth/v1/callback` (staat ook in Supabase bij de Google-provider).
+4. Kopieer de **Client ID** en het **Client secret**.
+5. Supabase → **Authentication → Sign In / Providers → Google**: zet aan, plak beide, **Save**.
+
+Alleen wie uitgenodigd is (of als gebruiker toegevoegd), kan binnen: met *Allow new users to sign up* uit
+weigert Supabase onbekende Google-accounts. Gebruik bij het uitnodigen hetzelfde e-mailadres als het Google-account.
 
 ### 3. Sleutels voor pushmeldingen
 

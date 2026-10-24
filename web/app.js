@@ -1501,6 +1501,25 @@ async function startApp(opslag) {
 
 function toonLogin(sb) {
   $("#login").hidden = false; $("#app").hidden = true;
+  // De Google-knop verschijnt pas als Google aan staat in Supabase (Authentication > Providers).
+  fetch(CFG.SUPABASE_URL + "/auth/v1/settings", { headers: { apikey: CFG.SUPABASE_ANON_KEY } })
+    .then(r => r.json()).then(st => {
+      if (!st.external?.google) return;
+      $("#googleBlok").hidden = false;
+      $("#loginUitleg").textContent = "Log in met je Google-account, of vraag een inloglink per e-mail.";
+    }).catch(() => {});
+  $("#googleKnop").addEventListener("click", async () => {
+    const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+    if (error) $("#loginMelding").textContent = "Inloggen met Google lukte niet: " + error.message;
+  });
+  // Terug van Google zonder toegang (niet uitgenodigd): Supabase zet de fout in het adres.
+  const fout = new URLSearchParams(location.hash.slice(1) || location.search.slice(1)).get("error_description");
+  if (fout) {
+    $("#loginMelding").textContent = /signups not allowed|not allowed/i.test(fout)
+      ? "Dit Google-account heeft nog geen toegang. Vraag de beheerder om je uit te nodigen met dit e-mailadres."
+      : "Inloggen lukte niet: " + fout;
+    history.replaceState(null, "", location.pathname);
+  }
   $("#loginForm").addEventListener("submit", async e => {
     e.preventDefault();
     const mail = $("#loginMail").value.trim(), m = $("#loginMelding");
