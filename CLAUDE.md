@@ -48,7 +48,7 @@ meldingen via web-push vanuit de PWA.
 - `streaming.py` (alleen stdlib): JustWatch GraphQL (`https://apis.justwatch.com/graphql`, onofficieel, geen sleutel,
   land BE) → `web/data/streaming.json` met `diensten`, `titels` (id → titel, soort, genres, `th` = thema-id's, poster, url)
   en `items` (`soort` nieuw/binnenkort/populair, `dienst`, `datum`, `se`). `newTitles` (pageType NEW per dag, UPCOMING met
-  `upcomingReleases`) en `popularTitles`. Diensten zonder datums bij JustWatch (VTM GO, Telenet): diff met
+  `upcomingReleases`) en `popularTitles`. Diensten zonder datums bij JustWatch (VTM GO, Streamz = JustWatch-pakket "Telenet", code `tel`): diff met
   `.cache/streaming-gezien.json`. De dienstcodes staan dubbel: `DIENSTEN` in `streaming.py` en in `web/app.js`.
   Profielveld `profielen.streaming` (text[]; `supabase/update-streaming.sql`). Zonder die kolom bewaart de app
   de keuze in localStorage (`SupaOpslag.bewaarProfiel`).

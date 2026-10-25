@@ -857,7 +857,7 @@ const DIENSTEN = [
   { id: "nfx", naam: "Netflix", sub: "Films, reeksen en docu's" }, { id: "dnp", naam: "Disney+", sub: "Disney, Marvel, Star Wars, Pixar" },
   { id: "prv", naam: "Prime Video", sub: "Amazon" }, { id: "mxx", naam: "HBO Max", sub: "HBO-reeksen en Warner-films" },
   { id: "atp", naam: "Apple TV+", sub: "Apple Originals" }, { id: "vrt", naam: "VRT MAX", sub: "Gratis, van de VRT" },
-  { id: "vtm", naam: "VTM GO", sub: "Van DPG Media" }, { id: "tel", naam: "Telenet", sub: "Streamz en Telenet TV" },
+  { id: "vtm", naam: "VTM GO", sub: "Van DPG Media" }, { id: "tel", naam: "Streamz", sub: "Vlaamse reeksen en films, ook via Telenet" },
   { id: "hay", naam: "Hayu", sub: "Reality" }, { id: "cru", naam: "Crunchyroll", sub: "Anime" }, { id: "mbi", naam: "MUBI", sub: "Arthouse en filmklassiekers" }
 ];
 const dienstNaam = id => DIENSTEN.find(d => d.id === id)?.naam || id;
@@ -865,7 +865,7 @@ const dienstNaam = id => DIENSTEN.find(d => d.id === id)?.naam || id;
 const DIENST_ZOEK = {
   nfx: q => `https://www.netflix.com/search?q=${q}`, atp: q => `https://tv.apple.com/be/search?term=${q}`, cru: q => `https://www.crunchyroll.com/search?q=${q}`,
   dnp: () => "https://www.disneyplus.com/", prv: () => "https://www.primevideo.com/", mxx: () => "https://www.hbomax.com/", vrt: () => "https://www.vrt.be/vrtmax/",
-  vtm: () => "https://www.vtmgo.be/", tel: () => "https://www.telenet.be/", hay: () => "https://www.hayu.com/", mbi: () => "https://mubi.com/"
+  vtm: () => "https://www.vtmgo.be/", tel: () => "https://www.streamz.be/", hay: () => "https://www.hayu.com/", mbi: () => "https://mubi.com/"
 };
 const dienstLink = (code, titel, w) => w?.[code] || DIENST_ZOEK[code]?.(encodeURIComponent(titel)) || null;
 /* Knoppen "Bekijk op …": eerst de diensten die je hebt, dan de rest. */

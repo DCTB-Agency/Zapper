@@ -5,7 +5,7 @@ web/data/streaming.json met per titel de dienst en de datum waarop hij online kw
 (of komt).
 
 - Nieuw: de dag waarop een titel online kwam op Netflix, Disney+, Prime Video, ...
-  Voor diensten waarvoor JustWatch dat niet bijhoudt (VRT MAX, VTM GO, Telenet)
+  Voor diensten waarvoor JustWatch dat niet bijhoudt (VTM GO, Streamz)
   vergelijken we met de vorige run: wat er nog niet was, is nieuw van vandaag.
   Die lijst staat in .cache/streaming-gezien.json (in Actions bewaard met actions/cache).
 - Binnenkort: titels met een aangekondigde datum.
@@ -37,7 +37,8 @@ MAX_NIEUW = 80        # per dienst: Prime Video en Crunchyroll zetten honderden 
 # JustWatch-code → naam in de app. De volgorde is de volgorde in de app.
 DIENSTEN = {
     "nfx": "Netflix", "dnp": "Disney+", "prv": "Prime Video", "mxx": "HBO Max", "atp": "Apple TV+",
-    "vrt": "VRT MAX", "vtm": "VTM GO", "tel": "Telenet",
+    "vrt": "VRT MAX", "vtm": "VTM GO",
+    "tel": "Streamz",  # JustWatch noemt dit pakket "Telenet"; daar staat de Streamz-catalogus (links naar telenet.tv)
     "hay": "Hayu", "cru": "Crunchyroll", "mbi": "MUBI",
 }
 ABONNEMENT = ["FLATRATE", "FREE", "ADS"]  # geen huur of aankoop

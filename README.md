@@ -21,7 +21,7 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 - **Vanavond**: zoekveld bovenaan, tips op maat volgens je interesses, trefwoorden en voorkeurzenders, plus wat er nu op je zenders loopt.
   De tips staan **per tijdstip** (per halfuur): je ziet tot 4 tips die op hetzelfde moment op verschillende zenders beginnen.
   Op de gsm schuif je per tijdstip opzij.
-- **Streaming**: wat er nieuw is op Netflix, Disney+, Prime Video, HBO Max, Apple TV+, VRT MAX, VTM GO, Telenet,
+- **Streaming**: wat er nieuw is op Netflix, Disney+, Prime Video, HBO Max, Apple TV+, VRT MAX, VTM GO, Streamz,
   Hayu, Crunchyroll en MUBI, met de dag waarop het online kwam, wat **binnenkort** komt (met datum) en wat populair is.
   Bovenaan tips volgens je interesses. De gegevens komen van JustWatch en worden 4 keer per dag vernieuwd.
   Wat vandaag nieuw is op jouw diensten, staat ook in je dagelijkse melding.
@@ -176,7 +176,7 @@ Waar je wel op moet letten:
   dag, dus dat gebeurt niet zolang die draait.
 - **JustWatch wijzigt zijn website.** Ook de streaminggegevens komen niet uit een officiële API. Mislukt het ophalen,
   dan blijft de tv-gids gewoon werken en toont het tabblad Streaming de laatste gegevens. Dan moet `streaming.py` aangepast worden.
-  VTM GO en Telenet houdt JustWatch minder goed bij: daar is "nieuw" wat er sinds de vorige run bijkwam.
+  VTM GO en Streamz houdt JustWatch minder goed bij: daar is "nieuw" wat er sinds de vorige run bijkwam.
 - **Pushmeldingen** van een toestel dat de app verwijderd heeft, worden automatisch opgeruimd.
 
 ## Goed om te weten
