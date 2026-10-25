@@ -19,6 +19,8 @@
   --accent: #b4500a;
   --accent-ink: #ffffff;
   --accent-soft: #fbeddc;
+  --gevaar: #c0392b;
+  --ok-soft: #dcf1e4;
   --now: #d6336c;
   --ok: #2f7d4f;
   --logo-bg: #1b2040;
@@ -48,7 +50,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0d1020; --surface: #161a2f; --surface-2: #1f2442; --ink: #e8eaf6; --muted: #979dbb;
-    --line: #272c48; --accent: #f4a62a; --accent-ink: #1a1204; --accent-soft: #3a2b10; --now: #ff6b9a;
+    --line: #272c48; --accent: #f4a62a; --accent-ink: #1a1204; --accent-soft: #3a2b10; --now: #ff6b9a; --gevaar: #e5534b; --ok-soft: #12321f;
     --ok: #5fc58a; --logo-bg: #232849; --scrim: rgb(0 0 0 / .65);
     color-scheme: dark;
   }
@@ -271,6 +273,16 @@ body.ob-modus .inhoud > .legal { display: none; }
 .stdetail img { flex: none; width: 96px; border-radius: var(--r-m); }
 .stdetail h3 { margin-top: 0; }
 .bron { margin-top: var(--s5); }
+.bronlink { margin: var(--s3) 0 0; font-size: var(--t-xs); }
+.luiken { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); padding: var(--s1); margin-bottom: var(--s4); background: var(--surface-2); border-radius: var(--r-m); }
+.luik { all: unset; box-sizing: border-box; min-height: var(--tik); display: flex; align-items: center; justify-content: center; gap: var(--s2); border-radius: var(--r-s); font-weight: 700; font-size: var(--t-s); color: var(--muted); cursor: pointer; }
+.luik[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.luik:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.luik .aantal { font: 500 var(--t-xs) var(--mono); background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 0 var(--s2); }
+.bronlink a { color: var(--muted); }
+.stkaart .chips { display: flex; gap: var(--s1); }
+.chip.nu { background: var(--ok-soft); color: var(--ok); }
+.chip.straks { background: var(--accent-soft); color: var(--accent); }
 @media (hover: hover) { .stkaart:hover { border-color: var(--accent); } }
 
 /* Tips per tijdslot: op de gsm schuif je per tijdstip opzij door de zenders */
@@ -528,3 +540,11 @@ dialog::backdrop { background: var(--scrim); }
 @media (min-width: 1080px) {
   .hero h1 { font-size: 76px; }
 }
+
+/* Bevestigen voor je iets weghaalt */
+dialog.bevestig { margin: auto; max-height: none; border: 0; border-radius: var(--r-l); padding: var(--s5); width: min(360px, calc(100vw - 2 * var(--s4))); background: var(--surface); color: var(--ink); box-shadow: 0 12px 40px rgba(0, 0, 0, .25); }
+dialog.bevestig::backdrop { background: rgba(10, 12, 25, .5); }
+.bevestig p { margin: 0 0 var(--s4); font-size: var(--t-m); font-weight: 600; }
+.bevestig .knoppen { display: flex; gap: var(--s2); justify-content: flex-end; flex-wrap: wrap; }
+.knop.gevaar { background: var(--gevaar); color: #fff; }
+@media (prefers-reduced-motion: no-preference) { dialog.bevestig[open] { animation: none; } }

@@ -54,14 +54,15 @@ GENRES = {
 
 INHOUD = """title shortDescription originalReleaseYear posterUrl fullPath runtime ageCertification
   genres { shortName } scoring { imdbScore }"""
-FILM = f"""... on Movie {{ content(country: BE, language: "nl") {{ {INHOUD}
+LINKS = "offers(country: BE, platform: WEB) { package { shortName } standardWebURL }"  # rechtstreekse link per dienst
+FILM = f"""... on Movie {{ {LINKS} content(country: BE, language: "nl") {{ {INHOUD}
     upcomingReleases(releaseTypes: [DIGITAL]) {{ releaseDate package {{ shortName }} }} }} }}"""
 NODE_POP = f"""id objectType {FILM}
-  ... on Show {{ content(country: BE, language: "nl") {{ {INHOUD} }} }}"""
+  ... on Show {{ {LINKS} content(country: BE, language: "nl") {{ {INHOUD} }} }}"""
 NODE = f"""id objectType {FILM}
-  ... on Season {{ content(country: BE, language: "nl") {{ seasonNumber
+  ... on Season {{ {LINKS} content(country: BE, language: "nl") {{ seasonNumber
     upcomingReleases(releaseTypes: [DIGITAL]) {{ releaseDate package {{ shortName }} }} }}
-    show {{ id content(country: BE, language: "nl") {{ {INHOUD} }} }} }}"""
+    show {{ id {LINKS} content(country: BE, language: "nl") {{ {INHOUD} }} }} }}"""
 
 Q_NIEUW = f"""query($d: Date!, $pt: NewPageType!, $p: [String!], $na: String) {{
   newTitles(country: BE, date: $d, first: 100, after: $na, priceDrops: false, pageType: $pt,
@@ -127,6 +128,13 @@ def titel(node):
     codes = [g["shortName"] for g in hoofd.get("genres") or [] if g["shortName"] in GENRES]
     themas = sorted({t for g in codes for t in GENRES[g][1]} | {"film" if film else "series"})
     poster = hoofd.get("posterUrl")
+    # Link naar de titel op de dienst zelf (netflix.com/title/...), per dienst; de reekspagina gaat voor het seizoen.
+    links = {}
+    for bron in ((node.get("show") or {}).get("offers"), node.get("offers")):
+        for o in bron or []:
+            code = (o.get("package") or {}).get("shortName")
+            if code in DIENSTEN and o.get("standardWebURL") and code not in links:
+                links[code] = o["standardWebURL"]
     return {
         "id": sid,
         "t": hoofd["title"],
@@ -141,6 +149,7 @@ def titel(node):
         "leeftijd": hoofd.get("ageCertification"),
         "poster": "https://images.justwatch.com" + poster.replace("{profile}", "s332").replace("{format}", "webp") if poster else None,
         "url": "https://www.justwatch.com" + hoofd["fullPath"] if hoofd.get("fullPath") else None,
+        "w": links,
     }
 
 
@@ -153,7 +162,9 @@ def main():
         t = titel(node)
         if not t or dienst not in DIENSTEN:
             return
-        titels.setdefault(t["id"], {k: v for k, v in t.items() if k != "se"})
+        bestaand = titels.setdefault(t["id"], {k: v for k, v in t.items() if k != "se"})
+        for code, url in t["w"].items():
+            bestaand["w"].setdefault(code, url)
         items.append({"soort": soort, "dienst": dienst, "datum": datum, "id": t["id"], "se": t["se"]})
 
     log(f"Nieuw: {DAGEN_TERUG} dagen terug")
@@ -181,9 +192,12 @@ def main():
         if not t:
             return
         r = register.setdefault(t["id"], {"i": t["id"], "t": t["t"], "s": "f" if t["soort"] == "film" else "r",
-                                          "j": t["j"], "p": t["poster"], "u": t["url"], "d": []})
+                                          "j": t["j"], "p": t["poster"], "u": t["url"], "d": [], "w": {}})
+        r["nu"] = True  # populair = nu te zien
         if code not in r["d"]:
             r["d"].append(code)
+        for c, url in t["w"].items():
+            r["w"].setdefault(c, url)
 
     for code in codes:
         try:
@@ -243,10 +257,18 @@ def main():
         t = titels.get(it["id"])
         if t:
             r = register.setdefault(it["id"], {"i": it["id"], "t": t["t"], "s": "f" if t["soort"] == "film" else "r",
-                                               "j": t.get("j"), "p": t.get("poster"), "u": t.get("url"), "d": []})
+                                               "j": t.get("j"), "p": t.get("poster"), "u": t.get("url"), "d": [], "w": {}})
             if it["dienst"] not in r["d"]:
                 r["d"].append(it["dienst"])
+            for c, url in (t.get("w") or {}).items():
+                r["w"].setdefault(c, url)
+            if it["soort"] == "binnenkort":
+                r["k"] = min(r.get("k") or it["datum"], it["datum"])  # nog niet te zien: vanaf deze datum
+            else:
+                r["nu"] = True
     for r in register.values():  # korter: de app zet de domeinnaam er weer voor
+        if r.pop("nu", False):
+            r.pop("k", None)
         r["p"] = (r["p"] or "").replace("https://images.justwatch.com", "")
         r["u"] = (r["u"] or "").replace("https://www.justwatch.com", "")
     ZOEK.write_text(json.dumps([{k: v for k, v in r.items() if v not in (None, "", [])} for r in register.values()],

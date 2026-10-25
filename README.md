@@ -25,6 +25,9 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   Hayu, Crunchyroll en MUBI, met de dag waarop het online kwam, wat **binnenkort** komt (met datum) en wat populair is.
   Bovenaan tips volgens je interesses. De gegevens komen van JustWatch en worden 4 keer per dag vernieuwd.
   Wat vandaag nieuw is op jouw diensten, staat ook in je dagelijkse melding.
+  Twee luiken: **Nu te zien** (vandaag nieuw, eerder nieuw, populair) en **Binnenkort** (per dag waarop het online komt).
+  Elke titel toont *Nu te zien* of *Vanaf …*. De knop **Bekijk op Netflix** (of een andere dienst) opent de titel
+  rechtstreeks op die dienst; JustWatch staat er nog als kleine link onder.
   Met het **zoekveld** vind je ook oudere films en reeksen (de ~4.000 populairste titels van alle diensten, typfouten mogen),
   met op welke dienst ze staan. Niet gevonden? Eén tik zoekt verder op JustWatch.
 - **Gids**: tijdrooster per dag, filter op zendergroep of favorieten.
@@ -33,6 +36,8 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   (*vanavond, morgen, vrijdag, weekend*), uren (*na 21u, voor 20u, om 20u30*), zenders (*op canvas, vtm*),
   soorten (*film, live, nieuw, voetbal, misdaad…*) en verdraagt typfouten (*verader* → *De Verraders*).
   Films en reeksen op streamingdiensten verschijnen er ook, in een apart blok **Op streaming**.
+- **Eerst bevestigen**: iets weghalen (van de kijklijst, uit je favorieten of voorkeurzenders, een trefwoord, *Niet voor mij*
+  of *Vergeet wat de gids leerde*) vraagt altijd eerst of je het zeker weet.
 - **Kijklijst**: bewaar een uitzending, of maak er een favoriet programma van zodat elke uitzending vanzelf meetelt.
 - **Agenda**: zet een uitzending in de agenda van je gsm (bestand voor iPhone, Android en Outlook, of
   rechtstreeks in Google Agenda), met een herinnering 10 minuten voor de start. Op de kijklijst zet

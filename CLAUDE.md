@@ -55,6 +55,10 @@ meldingen via web-push vanuit de PWA.
   Zoeken: `web/data/streaming-zoek.json` (top 500 populair per dienst + alles uit het overzicht; velden i/t/s/j/p/u/d,
   posterpad en JustWatch-pad zonder domein). `stZoek()` in `app.js`, ook gebruikt in Zoeken en het zoekveld op Vanavond.
   Live zoeken vanuit de browser bij JustWatch kan niet (geen CORS); daarom een link naar justwatch.com/be/zoeken.
+  Directe links per dienst: `w` (dienstcode → `standardWebURL` uit JustWatch-offers) in `titels` en in het zoekregister;
+  zonder link `DIENST_ZOEK` in `app.js` (zoekpagina of startpagina van de dienst). Zoekregister `k` = datum als de titel
+  nog niet te zien is. Tabblad Streaming: luiken `S.stModus` "nu"/"straks".
+- Weghalen altijd via `bevestig()` (eigen `<dialog id="bevestig">`), ook voor Niet voor mij en Vergeet.
 - Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
   per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).
 - `melding.py`: draait elk uur 14u-21u (`meldingen.yml`), stuurt per gebruiker één melding per dag
