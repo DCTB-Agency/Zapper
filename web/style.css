@@ -59,8 +59,10 @@
 /* ---------- Basis ---------- */
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; min-height: 100%; background: var(--bg); }
+/* Minstens schermhoog: anders zet iOS (web-app op het beginscherm) het vaste menu op korte pagina's te hoog. */
 body {
+  min-height: 100vh; min-height: 100lvh;
   margin: 0; background: var(--bg); color: var(--ink); font: var(--t-m)/1.45 var(--body);
   padding-top: env(safe-area-inset-top, 0px);
   -webkit-tap-highlight-color: transparent;
@@ -192,6 +194,8 @@ span.pil { cursor: default; }
   display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line);
   padding: 0 var(--gutter-r) env(safe-area-inset-bottom, 0px) var(--gutter-l); min-height: var(--nav-h);
 }
+/* Vangnet: zet iOS de balk toch iets te hoog, dan loopt hij door tot onderaan in plaats van een donkere strook te tonen. */
+.onderbalk::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 120px; background: var(--surface); }
 .onderbalk a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 11px; font-weight: 600; color: var(--muted); text-decoration: none; }
 .onderbalk svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .onderbalk a[aria-current="page"] { color: var(--accent); }
@@ -564,3 +568,10 @@ dialog.bevestig::backdrop { background: rgba(10, 12, 25, .5); }
 @media (hover: hover) { .wie-tegel:hover .wie-rond { border-color: var(--accent); } }
 .wie-form { max-width: 360px; margin: 0 auto; }
 .tekstknop.gevaar { color: var(--gevaar); }
+
+/* Nieuws na een update */
+.nieuws { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s4); border-radius: var(--r-l); background: var(--accent-soft); border: 1px solid var(--accent); }
+.nieuws h2 { margin: var(--s1) 0; font-size: var(--t-l); }
+.nieuws p { margin: 0; font-size: var(--t-s); }
+.nieuws .eyebrow { color: var(--accent); }
+.nieuws .knoppen { display: flex; gap: var(--s2); flex-wrap: wrap; }

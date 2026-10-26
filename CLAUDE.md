@@ -63,6 +63,9 @@ meldingen via web-push vanuit de PWA.
   Zie `supabase/update-profielen.sql`. `SupaOpslag.profielen_ok` = de kolom bestaat; zo niet werkt alles als één profiel.
   Actief profiel per toestel in localStorage (`avondgids.actiefprofiel.<uid>`); scherm `#wie` bij opstarten als er
   meer dan één profiel is (eens per sessie). `melding.py` stuurt per (user_id, profiel) naar de toestellen van dat profiel.
+- Nieuws na een update: lijst `NIEUWS` in `app.js` (id, titel, tekst, knop, actie, toon). Eén kaart bovenaan Vanavond,
+  per toestel onthouden in localStorage `avondgids.nieuws`. Voor een volgende aankondiging: een item met een nieuwe id toevoegen.
+- iOS (web-app op beginscherm): `body` minstens `100lvh` en `.onderbalk::after` als vangnet, anders staat het menu op korte pagina's te hoog.
 - Weghalen altijd via `bevestig()` (eigen `<dialog id="bevestig">`), ook voor Niet voor mij en Vergeet.
 - Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
   per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).

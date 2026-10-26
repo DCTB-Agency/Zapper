@@ -412,6 +412,23 @@ function item(p, { metDag = false, markeer = null, voortgang = false, volgende =
   </div>`;
 }
 
+/* ---------- Nieuws: na een update één keer uitleggen wat er nieuw is (per toestel onthouden) ---------- */
+const NIEUWS = [
+  { id: "profielen-2026-10", titel: "Nieuw: een profiel voor iedereen",
+    tekst: "Kijk je samen met anderen? Maak voor elke persoon een eigen profiel, met eigen tips, kijklijst en meldingen. Bij het openen kies je wie er kijkt.",
+    knop: "Profiel toevoegen", actie: "data-wienieuw", toon: () => OP.profielen_ok }
+];
+const nieuwsGezien = () => { try { return JSON.parse(localStorage.getItem("avondgids.nieuws")) || []; } catch (_) { return []; } };
+function nieuwsWeg(id) { try { localStorage.setItem("avondgids.nieuws", JSON.stringify([...nieuwsGezien(), id])); } catch (_) {} $("#nieuwsKaart").hidden = true; }
+function tekenNieuws() {
+  const n = NIEUWS.find(x => !nieuwsGezien().includes(x.id) && (!x.toon || x.toon()));
+  $("#nieuwsKaart").hidden = !n;
+  if (!n) return;
+  $("#nieuwsKaart").innerHTML = `<div><span class="eyebrow">Update</span><h2>${esc(n.titel)}</h2><p>${esc(n.tekst)}</p></div>
+    <div class="knoppen"><button class="knop" ${n.actie} data-nieuwsweg="${n.id}" type="button">${esc(n.knop)}</button>
+    <button class="knop stil" data-nieuwsweg="${n.id}" type="button">Begrepen</button></div>`;
+}
+
 /* ---------- Vanavond ---------- */
 async function tekenVanavond() {
   const iso = vandaag();
@@ -423,6 +440,7 @@ async function tekenVanavond() {
   $("#heroTitel").innerHTML = naam ? `${groet}, <em>${esc(naam)}</em>` : `Vanavond op <em>tv</em>`;
   $("#regioTxt").textContent = `${G.index.zenders.length} zenders · regio ${G.index.stad === "20001" ? "Antwerpen" : G.index.stad}`;
   $("#setupKaart").hidden = heeftInteresses();
+  tekenNieuws();
 
   const ps = G.dagen[iso] || [];
   const avondVan = lokaal(iso, 17), avondTot = lokaal(iso, 26);
@@ -1497,9 +1515,10 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-nieuwsweg],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.nieuwsweg) nieuwsWeg(d.nieuwsweg); // en daarna eventueel de actie van de knop (bv. profiel toevoegen)
     if (d.wissel !== undefined) return wisselProfiel(+d.wissel);
     if (d.wienieuw !== undefined) { S.wieNieuw = true; if (huidig !== "wie") location.hash = "wie"; else tekenWie(); return; }
     if (d.profielweg !== undefined) return verwijderActiefProfiel();
