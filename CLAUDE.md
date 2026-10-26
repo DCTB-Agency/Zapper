@@ -58,6 +58,11 @@ meldingen via web-push vanuit de PWA.
   Directe links per dienst: `w` (dienstcode → `standardWebURL` uit JustWatch-offers) in `titels` en in het zoekregister;
   zonder link `DIENST_ZOEK` in `app.js` (zoekpagina of startpagina van de dienst). Zoekregister `k` = datum als de titel
   nog niet te zien is. Tabblad Streaming: luiken `S.stModus` "nu"/"straks".
+- Meerdere profielen per login: kolom `profiel` (smallint, 0 = hoofdprofiel) in `profielen` (PK user_id+profiel),
+  `kijklijst`, `push_abonnementen`, `meldingen_log` (PK user_id+profiel+dag); RPC `registreer_toestel(..., p_profiel)`.
+  Zie `supabase/update-profielen.sql`. `SupaOpslag.profielen_ok` = de kolom bestaat; zo niet werkt alles als één profiel.
+  Actief profiel per toestel in localStorage (`avondgids.actiefprofiel.<uid>`); scherm `#wie` bij opstarten als er
+  meer dan één profiel is (eens per sessie). `melding.py` stuurt per (user_id, profiel) naar de toestellen van dat profiel.
 - Weghalen altijd via `bevestig()` (eigen `<dialog id="bevestig">`), ook voor Niet voor mij en Vergeet.
 - Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
   per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).

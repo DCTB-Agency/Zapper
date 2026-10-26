@@ -65,23 +65,41 @@ function vind(k) {
 /* ---------- Opslag ---------- */
 const STANDAARD = { naam: "", favorieten: [], themas: [], trefwoorden: [], talen: [], melding_aan: true, melding_uur: 17, tips_in_melding: true, onboarding_klaar: false, geleerd: {}, streaming: [] };
 
+/* Meerdere profielen per login (zoals bij Netflix): elk profiel heeft een nummer (0 = hoofdprofiel)
+   met eigen voorkeuren, kijklijst en meldingen. Welk profiel actief is, onthoudt elk toestel. */
 class LokaleOpslag {
-  constructor() { this.demo = true; this.email = "demo"; }
+  constructor() { this.demo = true; this.email = "demo"; this.profielen_ok = true; this.nr = +this.lees("actiefprofiel", 0) || 0; }
   lees(k, d) { try { return JSON.parse(localStorage.getItem("avondgids." + k)) ?? d; } catch (_) { return d; } }
   schrijf(k, v) { try { localStorage.setItem("avondgids." + k, JSON.stringify(v)); } catch (_) {} }
-  async profiel() { return { ...STANDAARD, ...this.lees("profiel", {}) }; }
-  async bewaarProfiel(p) { this.schrijf("profiel", p); }
-  async kijklijst() { return this.lees("kijklijst", []); }
-  async voegToe(item) { const l = this.lees("kijklijst", []); item.id = Date.now(); l.push(item); this.schrijf("kijklijst", l); return item; }
-  async verwijder(id) { this.schrijf("kijklijst", this.lees("kijklijst", []).filter(x => x.id !== id)); }
+  sl(k) { return this.nr ? `${k}.${this.nr}` : k; } // profiel 0 gebruikt de oude sleutels
+  async profiel() { return { ...STANDAARD, ...this.lees(this.sl("profiel"), {}) }; }
+  async bewaarProfiel(p) { this.schrijf(this.sl("profiel"), p); const l = this.lees("profielen", [0]); if (!l.includes(this.nr)) this.schrijf("profielen", [...l, this.nr]); }
+  async kijklijst() { return this.lees(this.sl("kijklijst"), []); }
+  async voegToe(item) { const l = this.lees(this.sl("kijklijst"), []); item.id = Date.now(); l.push(item); this.schrijf(this.sl("kijklijst"), l); return item; }
+  async verwijder(id) { this.schrijf(this.sl("kijklijst"), this.lees(this.sl("kijklijst"), []).filter(x => x.id !== id)); }
+  async profielen() { return this.lees("profielen", [0]).map(nr => ({ profiel: nr, naam: this.lees(nr ? `profiel.${nr}` : "profiel", {}).naam || "" })); }
+  kies(nr) { this.nr = nr; this.schrijf("actiefprofiel", nr); }
+  async nieuwProfiel(naam) {
+    const l = this.lees("profielen", [0]), nr = Math.max(...l) + 1;
+    this.schrijf("profielen", [...l, nr]); this.schrijf(`profiel.${nr}`, { ...STANDAARD, naam }); return nr;
+  }
+  async verwijderProfiel(nr) {
+    if (!nr) return;
+    this.schrijf("profielen", this.lees("profielen", [0]).filter(x => x !== nr));
+    try { localStorage.removeItem(`avondgids.profiel.${nr}`); localStorage.removeItem(`avondgids.kijklijst.${nr}`); } catch (_) {}
+  }
   async registreerToestel() { throw new Error("In demo-modus worden er geen meldingen verstuurd."); }
   async uitloggen() {}
 }
 
 class SupaOpslag {
-  constructor(sb, user) { this.sb = sb; this.uid = user.id; this.email = user.email; this.demo = false; }
+  constructor(sb, user) {
+    this.sb = sb; this.uid = user.id; this.email = user.email; this.demo = false;
+    this.profielen_ok = false; // wordt true als de database meerdere profielen kent (supabase/update-profielen.sql)
+    try { this.nr = +localStorage.getItem("avondgids.actiefprofiel." + this.uid) || 0; } catch (_) { this.nr = 0; }
+  }
   /* Kopie van je profiel in deze browser: als laden even mislukt (bv. een verlopen sessie), blijft alles staan. */
-  get cacheSleutel() { return "avondgids.profiel." + this.uid; }
+  get cacheSleutel() { return "avondgids.profiel." + this.uid + (this.nr ? "." + this.nr : ""); }
   bewaarKopie(p) { try { localStorage.setItem(this.cacheSleutel, JSON.stringify(p)); } catch (_) {} }
   kopie() { try { return JSON.parse(localStorage.getItem(this.cacheSleutel)); } catch (_) { return null; } }
   /* Een vraag aan de server, tot 3 keer: bij een verlopen sessie eerst de sessie vernieuwen. */
@@ -95,8 +113,21 @@ class SupaOpslag {
     }
     return r;
   }
+  /* Alle profielen van deze login. Kent de database nog geen profielen, dan is er alleen het hoofdprofiel. */
+  async profielen() {
+    const { data, error } = await this.met(() => this.sb.from("profielen").select("*").eq("user_id", this.uid));
+    if (error) throw error;
+    if (data?.length) this.profielen_ok = "profiel" in data[0];
+    else this.profielen_ok = !(await this.sb.from("profielen").select("profiel").limit(1)).error; // nog geen rij: bestaat de kolom?
+    if (!this.profielen_ok) { this.nr = 0; return [{ profiel: 0, naam: data?.[0]?.naam || "" }]; }
+    const l = data.map(r => ({ profiel: r.profiel, naam: r.naam || "" })).sort((a, b) => a.profiel - b.profiel);
+    if (!l.some(x => x.profiel === this.nr)) this.kies(l[0]?.profiel ?? 0);
+    return l;
+  }
+  kies(nr) { this.nr = nr; try { localStorage.setItem("avondgids.actiefprofiel." + this.uid, nr); } catch (_) {} }
+  filter(q) { return this.profielen_ok ? q.eq("profiel", this.nr) : q; }
   async profiel() {
-    const { data, error } = await this.met(() => this.sb.from("profielen").select("*").eq("user_id", this.uid).maybeSingle());
+    const { data, error } = await this.met(() => this.filter(this.sb.from("profielen").select("*").eq("user_id", this.uid)).maybeSingle());
     if (error) {
       const k = this.kopie();
       if (k) { toast("Je profiel komt uit deze browser; verbinding met de server lukt even niet"); return { ...STANDAARD, ...k }; }
@@ -114,23 +145,44 @@ class SupaOpslag {
   }
   async bewaarProfiel(p) {
     const rij = { user_id: this.uid, bijgewerkt: new Date().toISOString() };
+    if (this.profielen_ok) rij.profiel = this.nr;
     for (const k of Object.keys(STANDAARD)) rij[k] = p[k];
-    let { error } = await this.sb.from("profielen").upsert(rij);
+    const opslaan = () => this.sb.from("profielen").upsert(rij, this.profielen_ok ? { onConflict: "user_id,profiel" } : undefined);
+    let { error } = await opslaan();
     // Database nog zonder kolom "streaming" (supabase/update-streaming.sql niet uitgevoerd): bewaar die dan in deze browser.
     if (error && /streaming/.test(error.message)) {
       try { localStorage.setItem("avondgids.streaming", JSON.stringify(p.streaming || [])); } catch (_) {}
       delete rij.streaming;
-      ({ error } = await this.sb.from("profielen").upsert(rij));
+      ({ error } = await opslaan());
     }
     if (error) throw error;
     this.bewaarKopie(p);
   }
-  async kijklijst() { const { data, error } = await this.met(() => this.sb.from("kijklijst").select("*")); if (error) throw error; return data; }
-  async voegToe(item) { const { data, error } = await this.sb.from("kijklijst").insert(item).select().single(); if (error) throw error; return data; }
+  async kijklijst() { const { data, error } = await this.met(() => this.filter(this.sb.from("kijklijst").select("*"))); if (error) throw error; return data; }
+  async voegToe(item) {
+    if (this.profielen_ok) item = { ...item, profiel: this.nr };
+    const { data, error } = await this.sb.from("kijklijst").insert(item).select().single(); if (error) throw error; return data;
+  }
   async verwijder(id) { const { error } = await this.sb.from("kijklijst").delete().eq("id", id); if (error) throw error; }
+  async nieuwProfiel(naam) {
+    if (!this.profielen_ok) throw new Error("De database kent nog geen meerdere profielen. Voer eerst supabase/update-profielen.sql uit in Supabase.");
+    const l = await this.profielen(), nr = Math.max(...l.map(x => x.profiel)) + 1;
+    const { error } = await this.sb.from("profielen").insert({ ...STANDAARD, user_id: this.uid, profiel: nr, naam });
+    if (error) throw error;
+    return nr;
+  }
+  async verwijderProfiel(nr) {
+    if (!nr || !this.profielen_ok) return; // het hoofdprofiel blijft altijd bestaan
+    for (const tabel of ["kijklijst", "push_abonnementen", "profielen"]) {
+      const { error } = await this.sb.from(tabel).delete().eq("user_id", this.uid).eq("profiel", nr);
+      if (error) throw error;
+    }
+    try { localStorage.removeItem("avondgids.profiel." + this.uid + "." + nr); } catch (_) {}
+  }
   async registreerToestel(sub, toestel) {
-    const j = sub.toJSON();
-    const { error } = await this.sb.rpc("registreer_toestel", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_toestel: toestel });
+    const j = sub.toJSON(), arg = { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_toestel: toestel };
+    if (this.profielen_ok) arg.p_profiel = this.nr;
+    const { error } = await this.sb.rpc("registreer_toestel", arg);
     if (error) throw error;
   }
   async uitloggen() { await this.sb.auth.signOut(); }
@@ -702,6 +754,11 @@ function bewaarProfiel() {
 }
 function tekenProfiel() {
   const p = S.profiel;
+  $("#pProfielen").innerHTML = `<div class="wie-tegels klein">${(S.profielen || []).map(pr => `<button class="wie-tegel" data-wissel="${pr.profiel}" aria-current="${pr.profiel === OP.nr}">
+      <span class="wie-rond" style="background:${profielKleur(pr.profiel)}">${esc(profielLetter(pr.profiel === OP.nr ? p : pr))}</span><b>${esc((pr.profiel === OP.nr ? p.naam : pr.naam) || "Zonder naam")}</b></button>`).join("")}
+      ${OP.profielen_ok && (S.profielen || []).length < 6 ? `<button class="wie-tegel nieuw" data-wienieuw type="button"><span class="wie-rond">+</span><b>Toevoegen</b></button>` : ""}</div>
+    ${OP.nr ? `<button class="tekstknop gevaar" data-profielweg type="button">Dit profiel verwijderen</button>` : ""}
+    ${!OP.profielen_ok && !OP.demo ? `<p class="klein">Meerdere profielen kunnen pas als de beheerder <code>supabase/update-profielen.sql</code> uitvoerde in Supabase.</p>` : ""}`;
   $("#profielMail").textContent = OP.demo ? "Demo-modus" : OP.email;
   if (document.activeElement !== $("#pNaam")) $("#pNaam").value = p.naam || "";
   $("#pTalen").innerHTML = TALEN.map(t => `<button class="pil" data-taal="${t.id}" aria-pressed="${p.talen.includes(t.id)}">${esc(t.naam)}</button>`).join("");
@@ -1312,6 +1369,7 @@ async function obKlaar(overslaan = false) {
   }
   p.onboarding_klaar = true;
   try { await OP.bewaarProfiel(p); } catch (e) { toast("Bewaren lukte niet: " + e.message); return; }
+  const pr = S.profielen?.find(x => x.profiel === OP.nr); if (pr) pr.naam = p.naam;
   S.ob = null;
   $("#initiaal").textContent = initiaal();
   toast(overslaan ? "Je kan de vragen later beantwoorden in je profiel" : "Je profiel staat klaar");
@@ -1416,14 +1474,14 @@ function obVolgende() {
 function obTerug() { if (S.ob.stap > 0) { S.ob.stap--; tekenWelkom(); window.scrollTo(0, 0); } }
 
 /* ---------- Navigatie ---------- */
-const VIEWS = ["welkom", "vanavond", "gids", "zenders", "streaming", "zoeken", "kijklijst", "profiel"];
+const VIEWS = ["wie", "welkom", "vanavond", "gids", "zenders", "streaming", "zoeken", "kijklijst", "profiel"];
 let huidig = "vanavond";
 function route() {
   const [v, a] = location.hash.replace("#", "").split("/");
   huidig = VIEWS.includes(v) ? v : "vanavond";
   if (huidig === "zenders" && a && G.zMap[a]) { if (S.zender !== a) S.scrollZender = true; S.zender = a; }
   for (const x of VIEWS) $("#v-" + x).hidden = x !== huidig;
-  document.body.classList.toggle("ob-modus", huidig === "welkom");
+  document.body.classList.toggle("ob-modus", huidig === "welkom" || huidig === "wie");
   for (const a of $$("[data-tab]")) {
     if (a.dataset.tab === huidig) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
@@ -1431,7 +1489,7 @@ function route() {
   window.scrollTo(0, 0);
 }
 function herteken() {
-  ({ welkom: tekenWelkom, vanavond: tekenVanavond, gids: tekenGids, zenders: tekenZenders, streaming: tekenStreaming, zoeken: tekenZoeken, kijklijst: tekenKijklijst, profiel: tekenProfiel })[huidig]();
+  ({ wie: tekenWie, welkom: tekenWelkom, vanavond: tekenVanavond, gids: tekenGids, zenders: tekenZenders, streaming: tekenStreaming, zoeken: tekenZoeken, kijklijst: tekenKijklijst, profiel: tekenProfiel })[huidig]();
   if ($("#detail").open && $("#detail").dataset.k) toonDetail($("#detail").dataset.k);
 }
 
@@ -1439,9 +1497,12 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.wissel !== undefined) return wisselProfiel(+d.wissel);
+    if (d.wienieuw !== undefined) { S.wieNieuw = true; if (huidig !== "wie") location.hash = "wie"; else tekenWie(); return; }
+    if (d.profielweg !== undefined) return verwijderActiefProfiel();
     if (d.stdienst) { S.stDienst = d.stdienst; S.stMeer = false; return tekenStreaming(); }
     if (d.stmeer !== undefined) { S.stMeer = true; return tekenStreaming(); }
     if (d.stmodus) { S.stModus = d.stmodus; S.stMeer = false; return tekenStreaming(); }
@@ -1514,7 +1575,7 @@ function koppel() {
   $("#snelZoek").addEventListener("input", () => { clearTimeout(st); st = setTimeout(tekenSnelZoek, 180); });
   $("#snelForm").addEventListener("submit", e => { e.preventDefault(); S.zoek = $("#snelZoek").value; location.hash = "zoeken"; });
   $("#zoekForm").addEventListener("submit", e => { e.preventDefault(); $("#zoekInput").blur(); tekenZoeken(); });
-  $("#pNaam").addEventListener("input", e => { S.profiel.naam = e.target.value.trim(); $("#initiaal").textContent = initiaal(); bewaarProfiel(); });
+  $("#pNaam").addEventListener("input", e => { S.profiel.naam = e.target.value.trim(); const pr = S.profielen?.find(x => x.profiel === OP.nr); if (pr) pr.naam = S.profiel.naam; $("#initiaal").textContent = initiaal(); bewaarProfiel(); });
   $("#pWoordForm").addEventListener("submit", e => {
     e.preventDefault(); const w = $("#pWoord").value.trim();
     if (w && !S.profiel.trefwoorden.some(x => norm(x) === norm(w))) { S.profiel.trefwoorden = [...S.profiel.trefwoorden, w]; bewaarProfiel(); }
@@ -1540,7 +1601,58 @@ async function wisselFav(id) {
   toast(S.profiel.favorieten.includes(id) ? `${G.zMap[id].naam} bij je favorieten` : `${G.zMap[id].naam} uit je favorieten`);
   herteken();
 }
-const initiaal = () => (S.profiel.naam || OP?.email || "?").trim()[0]?.toUpperCase() || "?";
+const initiaal = () => {
+  const knop = $("#profielKnop"), meer = OP && S.profielen?.length > 1; // kleur van het actieve profiel
+  knop.style.background = meer ? profielKleur(OP.nr) : ""; knop.style.color = meer ? "#fff" : "";
+  return (S.profiel.naam || OP?.email || "?").trim()[0]?.toUpperCase() || "?";
+};
+
+/* ---------- Profielen: wie kijkt er? ---------- */
+const KLEUREN = ["#b4500a", "#2f6db5", "#2f7d4f", "#8a3fb5", "#b5304f", "#5b6475"];
+const profielKleur = nr => KLEUREN[nr % KLEUREN.length];
+const profielLetter = pr => (pr.naam || "?").trim()[0]?.toUpperCase() || "?";
+function tekenWie() {
+  const nieuw = S.wieNieuw;
+  $("#wieInhoud").innerHTML = `
+    <div class="wie-tegels">${S.profielen.map(pr => `<button class="wie-tegel" data-wissel="${pr.profiel}" aria-current="${pr.profiel === OP.nr}">
+      <span class="wie-rond" style="background:${profielKleur(pr.profiel)}">${esc(profielLetter(pr))}</span><b>${esc(pr.naam || "Zonder naam")}</b></button>`).join("")}
+      ${OP.profielen_ok && S.profielen.length < 6 ? `<button class="wie-tegel nieuw" data-wienieuw type="button"><span class="wie-rond">+</span><b>Profiel toevoegen</b></button>` : ""}
+    </div>
+    ${nieuw ? `<form id="wieForm" class="woordform wie-form"><label class="vh" for="wieNaam">Naam van het nieuwe profiel</label>
+      <input id="wieNaam" type="text" autocomplete="off" placeholder="Naam, bv. Mama of Lars" required maxlength="30">
+      <button class="knop">Maak profiel</button></form>` : ""}
+    ${!OP.profielen_ok ? `<p class="klein">Meerdere profielen kunnen pas als de beheerder <code>supabase/update-profielen.sql</code> uitvoerde in Supabase.</p>` : ""}`;
+  if (nieuw) { $("#wieNaam").focus(); $("#wieForm").addEventListener("submit", e => { e.preventDefault(); maakProfiel($("#wieNaam").value.trim()); }); }
+}
+async function wisselProfiel(nr) {
+  try { sessionStorage.setItem("avondgids.gekozen", "1"); } catch (_) {}
+  if (nr === OP.nr && S.profiel) { location.hash = "vanavond"; return; }
+  OP.kies(nr);
+  try { [S.profiel, S.kijk] = await Promise.all([OP.profiel(), OP.kijklijst()]); }
+  catch (e) { toast("Dit profiel laden lukte niet: " + e.message); return; }
+  S.profiel = { ...STANDAARD, ...S.profiel }; S.ob = null; S.stDienst = null;
+  $("#initiaal").textContent = initiaal();
+  // Meldingen op dit toestel volgen het actieve profiel.
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration(); // .ready zou eeuwig wachten zonder service worker
+    const sub = await reg?.pushManager?.getSubscription();
+    if (sub && !OP.demo) await OP.registreerToestel(sub, isIos ? "iPhone/iPad" : /android/i.test(navigator.userAgent) ? "Android" : "Computer");
+  } catch (_) {}
+  toast(`Je kijkt nu als ${S.profiel.naam || "dit profiel"}`);
+  location.hash = !S.profiel.onboarding_klaar && !heeftInteresses() ? "welkom" : "vanavond";
+  if (huidig === "vanavond") herteken();
+}
+async function maakProfiel(naam) {
+  if (!naam) return;
+  try { const nr = await OP.nieuwProfiel(naam); S.profielen = await OP.profielen(); S.wieNieuw = false; await wisselProfiel(nr); }
+  catch (e) { toast("Profiel maken lukte niet: " + e.message); }
+}
+async function verwijderActiefProfiel() {
+  const nr = OP.nr; if (!nr) return;
+  if (!await bevestig(`Het profiel ${S.profiel.naam || ""} verwijderen? De voorkeuren, kijklijst en meldingen van dit profiel gaan definitief verloren.`, "Profiel verwijderen")) return;
+  try { await OP.verwijderProfiel(nr); S.profielen = await OP.profielen(); await wisselProfiel(0); toast("Profiel verwijderd"); }
+  catch (e) { toast("Verwijderen lukte niet: " + e.message); }
+}
 
 /* ---------- Opstarten ---------- */
 async function startApp(opslag) {
@@ -1550,7 +1662,7 @@ async function startApp(opslag) {
   try { await laadIndex(); }
   catch (e) { document.querySelector(".inhoud").innerHTML = `<p class="leeg">De tv-gids kon niet geladen worden (${esc(e.message)}). Probeer het later opnieuw.</p>`; return; }
   let laadFout = null;
-  try { [S.profiel, S.kijk] = await Promise.all([OP.profiel(), OP.kijklijst()]); }
+  try { S.profielen = await OP.profielen(); [S.profiel, S.kijk] = await Promise.all([OP.profiel(), OP.kijklijst()]); }
   catch (e) { laadFout = e; }
   if (laadFout) {
     // Nooit de vragenlijst tonen omdat laden mislukte: dan zou je je antwoorden opnieuw moeten geven.
@@ -1563,8 +1675,10 @@ async function startApp(opslag) {
   $("#klok").textContent = tijd(nu());
   await laadDag(vandaag());
   ruimKijklijstOp();
-  if (!S.profiel.onboarding_klaar && !heeftInteresses()) location.hash = "welkom";
-  else if (location.hash.startsWith("#welkom")) location.hash = "vanavond"; // bv. een oude bladwijzer of herstelde tab
+  let gekozen = false; try { gekozen = !!sessionStorage.getItem("avondgids.gekozen"); } catch (_) {}
+  if (S.profielen.length > 1 && !gekozen) location.hash = "wie"; // gedeeld toestel: eerst kiezen wie er kijkt
+  else if (!S.profiel.onboarding_klaar && !heeftInteresses()) location.hash = "welkom";
+  else if (location.hash.startsWith("#welkom") || location.hash.startsWith("#wie")) location.hash = "vanavond"; // bv. een oude bladwijzer of herstelde tab
   koppel();
   route();
   laadAlles().then(() => { G.alles = true; });

@@ -59,6 +59,15 @@
   <div id="demoBalk" class="demobalk" hidden>Demo-modus: je voorkeuren worden alleen in deze browser bewaard. Vul <code>config.js</code> in om met accounts te werken.</div>
 
   <main class="inhoud">
+    <!-- Wie kijkt er? (meerdere profielen op één login) -->
+    <section id="v-wie" class="view" hidden>
+      <div class="wie">
+        <h1>Wie kijkt er?</h1>
+        <p class="klein">Elk profiel heeft eigen tips, een eigen kijklijst en eigen meldingen.</p>
+        <div id="wieInhoud"></div>
+      </div>
+    </section>
+
     <!-- Onboarding -->
     <section id="v-welkom" class="view" hidden>
       <div class="ob">
@@ -192,6 +201,11 @@
     <!-- Profiel -->
     <section id="v-profiel" class="view" hidden>
       <div class="profiel">
+        <div class="blok">
+          <div class="blok-kop"><h2>Profielen</h2><p>Meerdere mensen op dezelfde login, elk met eigen voorkeuren.</p></div>
+          <div id="pProfielen"></div>
+        </div>
+
         <div class="blok">
           <div class="blok-kop"><h2>Jij</h2><p id="profielMail"></p></div>
           <label for="pNaam">Naam</label>

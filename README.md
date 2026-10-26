@@ -44,6 +44,10 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   **Alles in mijn agenda** al je komende uitzendingen er in één keer in.
 - **Meldingen**: elke dag op een uur naar keuze een pushmelding op Android of iPhone met wat er
   vanavond op je kijklijst staat, aangevuld met tips.
+- **Profielen**: op één login kunnen meerdere mensen een eigen profiel hebben (zoals bij Netflix), elk met eigen
+  vragenlijst, tips, kijklijst en meldingen. Bij het openen kies je **Wie kijkt er?**; wisselen, toevoegen en verwijderen
+  doe je in je profiel. Een toestel krijgt de meldingen van het profiel dat er actief is.
+  Eenmalig nodig in Supabase: `supabase/update-profielen.sql` uitvoeren.
 - **Gebruikers**: meerdere mensen loggen in met een link via e-mail. Alleen wie uitgenodigd is, kan erin.
 
 Alles draait gratis: GitHub Pages (website), GitHub Actions (dagelijkse gids en meldingen) en

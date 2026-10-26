@@ -228,7 +228,10 @@ def main():
 
     sb = Supabase()
     profielen = sb.req("GET", "profielen?melding_aan=eq.true&select=*")
-    al_gehad = {r["user_id"] for r in sb.req("GET", f"meldingen_log?dag=eq.{dag}&select=user_id")}
+    # Meerdere profielen per login (supabase/update-profielen.sql): alles per (gebruiker, profielnummer).
+    per_profiel = any("profiel" in p for p in profielen)
+    al_gehad = {(r["user_id"], r.get("profiel", 0))
+                for r in sb.req("GET", f"meldingen_log?dag=eq.{dag}&select=*")}
     log(f"{len(profielen)} profielen met meldingen aan, {len(al_gehad)} kregen vandaag al een melding.")
 
     if not args.droog:
@@ -238,10 +241,11 @@ def main():
         claims = {"sub": os.environ.get("VAPID_SUBJECT", "mailto:tvgids@example.com")}
 
     for prof in profielen:
-        uid = prof["user_id"]
-        if not args.forceer and (uid in al_gehad or nu.hour < prof["melding_uur"]):
+        uid, nr = prof["user_id"], prof.get("profiel", 0)
+        enkel = f"&profiel=eq.{nr}" if per_profiel else ""
+        if not args.forceer and ((uid, nr) in al_gehad or nu.hour < prof["melding_uur"]):
             continue
-        kijk = sb.req("GET", f"kijklijst?user_id=eq.{uid}&select=*")
+        kijk = sb.req("GET", f"kijklijst?user_id=eq.{uid}{enkel}&select=*")
         msg = melding_voor(prof, kijk, progs, themas, index["zenders"], nu, stream)
         wie = prof.get("naam") or uid[:8]
         if args.droog:
@@ -252,7 +256,7 @@ def main():
         else:
             log(f"- {wie}: {msg['title']}\n    " + msg["body"].replace("\n", "\n    "))
             if not args.droog:
-                toestellen = sb.req("GET", f"push_abonnementen?user_id=eq.{uid}&select=*")
+                toestellen = sb.req("GET", f"push_abonnementen?user_id=eq.{uid}{enkel}&select=*")
                 for t in toestellen:
                     try:
                         webpush({"endpoint": t["endpoint"], "keys": {"p256dh": t["p256dh"], "auth": t["auth"]}},
@@ -264,7 +268,8 @@ def main():
                             sb.req("DELETE", f"push_abonnementen?id=eq.{t['id']}")
                         log(f"    push mislukt ({code}) voor toestel {t['id']}")
         if not args.droog and not args.forceer:
-            sb.req("POST", "meldingen_log", {"user_id": uid, "dag": dag}, {"Prefer": "resolution=ignore-duplicates"})
+            rij = {"user_id": uid, "dag": dag, **({"profiel": nr} if per_profiel else {})}
+            sb.req("POST", "meldingen_log", rij, {"Prefer": "resolution=ignore-duplicates"})
 
 
 if __name__ == "__main__":
