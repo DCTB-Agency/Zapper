@@ -69,7 +69,7 @@ meldingen via web-push vanuit de PWA.
 - Kop: sticky `top: 0` met `padding-top: env(safe-area-inset-top)` en ondoorzichtig. Tegen het vervagend randeffect van
   iOS 26 (Liquid Glass) in de web-app: `.statusstrook`, een vaste ondoorzichtige strook bovenaan (min. 12px, alleen
   standalone; `html[data-standalone]` via navigator.standalone). Een sticky kop telt pas mee als hij "vastzit" (na scrollen).
-  Nog niet bevestigd op een iPhone; anders: de kop ~30pt lager zetten in standalone. Zoekknop `#kopZoek` verschijnt via `body.gescrold` (scrollY > 140).
+  Bevestigd op een iPhone (26 oktober 2026). Ook het iOS 26-menu-gat (html min-height) is daar bevestigd. Zoekknop `#kopZoek` verschijnt via `body.gescrold` (scrollY > 140).
 - Updates: sw.js haalt bestanden met `cache: "no-cache"`; app herlaadt één keer bij `controllerchange` (alleen als er al
   een service worker was). Verhoog `VERSIE` in sw.js bij elke wijziging in web/.
 - Installeren: `<dialog id="installeer">`; Android via `beforeinstallprompt`, iOS met stappen. Alleen op gsm, niet in
