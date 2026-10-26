@@ -17,6 +17,8 @@ import argparse
 import datetime as dt
 import json
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -38,9 +40,20 @@ def log(*a):
 
 
 def get(url):
+    """JSON ophalen; bij een tijdelijke storing (verbinding verbroken, time-out) tot 3 keer opnieuw proberen."""
     req = urllib.request.Request(url, headers={"User-Agent": "telenet-tvgids/1.0"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())
+    for poging in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code < 500 or poging == 2:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if poging == 2:
+                raise
+        log(f"  opnieuw ({poging + 1}): {url[-60:]}")
+        time.sleep(2 + 3 * poging)
 
 
 def zenders(stad):
