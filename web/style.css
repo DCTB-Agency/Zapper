@@ -71,7 +71,6 @@ html { -webkit-text-size-adjust: 100%; background: var(--bg); }
 }
 body {
   margin: 0; background: var(--bg); color: var(--ink); font: var(--t-m)/1.45 var(--body);
-  padding-top: env(safe-area-inset-top, 0px);
   -webkit-tap-highlight-color: transparent;
 }
 button, input, select { font: inherit; color: inherit; }
@@ -190,15 +189,22 @@ span.pil { cursor: default; }
 }
 
 /* ---------- App-schil ---------- */
-.kop { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+/* De kop loopt door tot helemaal bovenaan (onder de klok), ondoorzichtig. Zo legt iOS 26 in de web-app op het
+   beginscherm zijn vervagend randeffect er niet overheen: dat slaat het over bij een volle, vaste balk aan de rand. */
+.kop { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
 .kop::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--merk); opacity: .85; }
 .kop-in { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; gap: var(--s5); min-height: var(--kop-h); padding: 0 var(--gutter-r) 0 var(--gutter-l); }
 .merk { display: flex; align-items: center; gap: var(--s2); text-decoration: none; min-height: var(--tik); }
-.merk-icoon { width: 32px; height: 32px; border-radius: var(--r-s); }
 .woordmerk { display: block; height: 22px; width: auto; }
 .login-merk { margin: 0; }
 .login-merk .woordmerk { height: 40px; }
 .tabs { display: none; }
+/* Zoekknop in de kop: verschijnt pas als je naar beneden scrolt (body.gescrold) */
+.kopzoek { margin-left: auto; width: var(--tik); height: var(--tik); display: grid; place-items: center; border-radius: 50%; color: var(--ink); opacity: 0; pointer-events: none; transform: scale(.8); }
+.kopzoek svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+body.gescrold .kopzoek { opacity: 1; pointer-events: auto; transform: none; }
+@media (prefers-reduced-motion: no-preference) { .kopzoek { transition: opacity .2s, transform .2s; } }
+.kopzoek + .profielknop { margin-left: 0; }
 .profielknop { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--merk); color: var(--accent-ink); font-weight: 700; text-decoration: none; flex: none; }
 .demobalk { background: var(--accent-soft); color: var(--ink); font-size: var(--t-xs); padding: var(--s2) var(--gutter-r) var(--s2) var(--gutter-l); text-align: center; }
 
@@ -232,7 +238,7 @@ body.ob-modus .inhoud > .legal { display: none; }
 }
 
 /* ---------- Inloggen ---------- */
-.login { min-height: 100dvh; display: grid; place-items: center; padding: var(--s5) var(--gutter-r) var(--s5) var(--gutter-l); }
+.login { min-height: 100dvh; display: grid; place-items: center; padding: calc(var(--s5) + env(safe-area-inset-top, 0px)) var(--gutter-r) var(--s5) var(--gutter-l); }
 .login-kaart { width: min(400px, 100%); display: flex; flex-direction: column; gap: var(--s4); }
 .login-kaart img { border-radius: var(--r-l); }
 .login-kaart h1 { font: 800 52px/.9 var(--display); letter-spacing: .01em; }
@@ -500,7 +506,7 @@ dialog::backdrop { background: var(--scrim); }
   .tabs a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--s3); border-radius: var(--r-m); text-decoration: none; color: var(--muted); font-weight: 600; }
   .tabs a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
   .woordmerk { height: 26px; }
-  .merk-icoon { width: 36px; height: 36px; }
+
   .onderbalk { display: none; }
   .inhoud { padding-top: var(--s6); padding-bottom: var(--s6); }
   .view { gap: var(--s6); }
@@ -531,7 +537,7 @@ dialog::backdrop { background: var(--scrim); }
 
   /* zenders: lijst links, programma rechts */
   .zender-layout { grid-template-columns: 280px minmax(0, 1fr); gap: var(--s5); }
-  .zenderkiezer { position: sticky; top: calc(var(--kop-h) + var(--s4)); max-height: calc(100dvh - var(--kop-h) - var(--s6)); }
+  .zenderkiezer { position: sticky; top: calc(var(--kop-h) + var(--s4) + env(safe-area-inset-top, 0px)); max-height: calc(100dvh - var(--kop-h) - var(--s6)); }
   .zenderlijst { flex-direction: column; gap: 2px; overflow-y: auto; overflow-x: hidden; margin: 0; padding: var(--s1); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); }
   .zknop { display: flex; align-items: center; gap: var(--s3); width: auto; height: auto; min-height: 44px; padding: 0 var(--s2); border-color: transparent; background: transparent; }
   .zknop[aria-current="true"] { border-color: transparent; }
@@ -589,3 +595,11 @@ dialog.bevestig::backdrop { background: rgba(10, 12, 25, .5); }
 .nieuws p { margin: 0; font-size: var(--t-s); }
 .nieuws .eyebrow { color: var(--accent); }
 .nieuws .knoppen { display: flex; gap: var(--s2); flex-wrap: wrap; }
+
+/* Op het beginscherm zetten */
+.installeer p { margin: 0; }
+.installeer-kop { display: flex; align-items: center; gap: var(--s3); font-size: var(--t-l); }
+.installeer-kop img { border-radius: var(--r-m); }
+.stappen { margin: 0; padding-left: var(--s5); display: flex; flex-direction: column; gap: var(--s2); }
+.stappen .deel { width: 18px; height: 18px; vertical-align: -3px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.installeer-kop b { color: var(--ink); }

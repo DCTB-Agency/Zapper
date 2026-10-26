@@ -44,7 +44,7 @@
 <div id="app" hidden>
   <header class="kop">
     <div class="kop-in">
-      <a href="#vanavond" class="merk" aria-label="Zapper, naar Vanavond"><img class="merk-icoon" src="icoon-192.png" alt="" width="32" height="32"><picture><source srcset="logo-woord-donker.png" media="(prefers-color-scheme: dark)"><img class="woordmerk" src="logo-woord-licht.png" alt="Zapper" width="194" height="32"></picture></a>
+      <a href="#vanavond" class="merk" aria-label="Zapper, naar Vanavond"><picture><source srcset="logo-woord-donker.png" media="(prefers-color-scheme: dark)"><img class="woordmerk" src="logo-woord-licht.png" alt="Zapper" width="194" height="32"></picture></a>
       <nav class="tabs" id="tabs" aria-label="Onderdelen">
         <a href="#vanavond" data-tab="vanavond">Vanavond</a>
         <a href="#gids" data-tab="gids">Gids</a>
@@ -53,6 +53,7 @@
         <a href="#zoeken" data-tab="zoeken">Zoeken</a>
         <a href="#kijklijst" data-tab="kijklijst">Kijklijst</a>
       </nav>
+      <a href="#zoeken" class="kopzoek" id="kopZoek" aria-label="Zoeken" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></a>
       <a href="#profiel" class="profielknop" id="profielKnop" aria-label="Mijn voorkeuren"><span id="initiaal">?</span></a>
     </div>
   </header>
@@ -285,6 +286,12 @@
 </div>
 
 <dialog id="detail"><div id="detailIn" class="detail"></div></dialog>
+<dialog id="installeer" aria-labelledby="installeerTitel"><div class="detail installeer">
+  <div class="kopje"><span class="installeer-kop"><img src="icoon-192.png" alt="" width="48" height="48"><b id="installeerTitel">Zet Zapper op je beginscherm</b></span><button class="sluit" data-installnee type="button">Sluiten</button></div>
+  <p>Dan open je Zapper met één tik, schermvullend zoals een gewone app, en kan je meldingen krijgen.</p>
+  <div id="installeerStappen"></div>
+  <div class="knoppen"><button class="knop" id="installeerJa" type="button" hidden>Zet op beginscherm</button><button class="knop stil" data-installnee type="button">Nu niet</button></div>
+</div></dialog>
 <dialog id="bevestig" class="bevestig" aria-labelledby="bevestigTekst">
   <p id="bevestigTekst"></p>
   <div class="knoppen"><button class="knop stil" id="bevestigNee" type="button">Annuleren</button><button class="knop gevaar" id="bevestigJa" type="button">Verwijderen</button></div>

@@ -820,7 +820,7 @@ async function pushStatus() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
     if (isIos && !isStandalone) {
       st.textContent = "Op iPhone werken meldingen alleen vanuit de app op je beginscherm.";
-      uitleg.innerHTML = "Tik in Safari op <b>Deel</b> en kies <b>Zet op beginscherm</b>. Open Zapper daarna via het nieuwe icoon en kom hier terug.";
+      uitleg.innerHTML = "Tik in Safari op <b>Deel</b> en kies <b>Zet op beginscherm</b>. Open Zapper daarna via het nieuwe icoon en kom hier terug. <button class=\"tekstknop\" type=\"button\" onclick=\"vraagInstallatie(true)\">Toon hoe</button>";
     } else st.textContent = "Deze browser ondersteunt geen pushmeldingen.";
     knop.hidden = true; return;
   }
@@ -1614,6 +1614,11 @@ function koppel() {
   $("#obTerug").addEventListener("click", obTerug);
   $("#obLater").addEventListener("click", () => obKlaar(true));
   $("#uitloggen").addEventListener("click", async () => { await OP.uitloggen(); location.hash = ""; location.reload(); });
+  // Zoekknop in de kop zodra je wat naar beneden scrolt (niet op de zoekpagina zelf).
+  const scrolCheck = () => { const aan = scrollY > 140 && huidig !== "zoeken"; document.body.classList.toggle("gescrold", aan); $("#kopZoek").tabIndex = aan ? 0 : -1; };
+  addEventListener("scroll", scrolCheck, { passive: true });
+  addEventListener("hashchange", scrolCheck);
+  $("#kopZoek").addEventListener("click", () => setTimeout(() => $("#zoekInput").focus(), 50));
   setInterval(() => { $("#klok").textContent = tijd(nu()); }, 15000);
   setInterval(() => { if (!$("#detail").open && ["vanavond", "gids"].includes(huidig)) herteken(); }, 60000);
 }
@@ -1677,6 +1682,52 @@ async function verwijderActiefProfiel() {
   catch (e) { toast("Verwijderen lukte niet: " + e.message); }
 }
 
+/* ---------- Op het beginscherm zetten ----------
+   Android (Chrome, Samsung): de browser geeft een "installeer"-gebeurtenis, dan volstaat één knop.
+   iPhone/iPad: Apple laat dat niet toe; we tonen de stappen via de deelknop. Niet meer vragen als de app al
+   op het beginscherm staat; "Nu niet" = 7 dagen niet meer vragen. */
+const isMobiel = isIos || /android/i.test(navigator.userAgent);
+let installGebeurtenis = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installGebeurtenis = e; });
+addEventListener("appinstalled", () => { installGebeurtenis = null; try { localStorage.setItem("avondgids.geinstalleerd", "1"); } catch (_) {} });
+function installStappen() {
+  if (isIos) return `<ol class="stappen">
+    <li>Tik op de <b>deelknop</b> <svg class="deel" viewBox="0 0 24 24" aria-label="deelknop"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg> onderaan in Safari (soms eerst op <b>···</b>).</li>
+    <li>Kies <b>Zet op beginscherm</b>. Zie je het niet, scrol dan wat naar beneden in het lijstje.</li>
+    <li>Tik op <b>Voeg toe</b>. Open Zapper voortaan via het nieuwe icoon.</li></ol>`;
+  if (installGebeurtenis) return "";
+  return `<ol class="stappen"><li>Tik in je browser op het menu <b>⋮</b> rechtsboven.</li><li>Kies <b>App installeren</b> of <b>Toevoegen aan startscherm</b>.</li></ol>`;
+}
+function vraagInstallatie(altijd = false) {
+  if (isStandalone || OP?.demo && !altijd) return;
+  if (!altijd) {
+    if (!isMobiel) return;
+    try {
+      if (localStorage.getItem("avondgids.geinstalleerd")) return;
+      if (Date.now() - (+localStorage.getItem("avondgids.installlater") || 0) < 7 * 864e5) return;
+    } catch (_) {}
+  }
+  $("#installeerStappen").innerHTML = installStappen();
+  $("#installeerJa").hidden = !installGebeurtenis;
+  if (!$("#installeer").open) $("#installeer").showModal();
+}
+function koppelInstallatie() {
+  for (const b of $$("[data-installnee]")) b.addEventListener("click", () => {
+    try { localStorage.setItem("avondgids.installlater", Date.now()); } catch (_) {}
+    $("#installeer").close();
+  });
+  $("#installeerJa").addEventListener("click", async () => {
+    if (!installGebeurtenis) return;
+    installGebeurtenis.prompt();
+    const { outcome } = await installGebeurtenis.userChoice.catch(() => ({}));
+    installGebeurtenis = null;
+    $("#installeer").close();
+    if (outcome === "accepted") toast("Zapper staat op je beginscherm");
+  });
+  // Even wachten zodat de app eerst zichtbaar is; niet tijdens de vragenlijst.
+  setTimeout(() => { if (huidig !== "welkom" && huidig !== "wie" && !$("#detail").open && !$("#bevestig").open) vraagInstallatie(); }, 4000);
+}
+
 /* ---------- Opstarten ---------- */
 async function startApp(opslag) {
   OP = opslag;
@@ -1702,6 +1753,7 @@ async function startApp(opslag) {
   if (!S.profiel.onboarding_klaar && !heeftInteresses()) location.hash = "welkom";
   else if (location.hash.startsWith("#welkom") || location.hash.startsWith("#wie")) location.hash = "vanavond"; // bv. een oude bladwijzer of herstelde tab
   koppel();
+  koppelInstallatie();
   route();
   laadAlles().then(() => { G.alles = true; });
 }
@@ -1739,7 +1791,13 @@ function toonLogin(sb) {
 }
 
 (async function boot() {
-  if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    // Na een update neemt de nieuwe service worker het over: één keer herladen, zodat je meteen de nieuwe app ziet.
+    const hadAl = !!navigator.serviceWorker.controller;
+    let herladen = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadAl && !herladen) { herladen = true; location.reload(); } });
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => {});
+  }
   if (!CFG.SUPABASE_URL || !window.supabase) return startApp(new LokaleOpslag());
   const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
   let gestart = false;

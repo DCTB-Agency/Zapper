@@ -49,6 +49,8 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   doe je in je profiel. Elk toestel onthoudt welk profiel er actief is; na de update toont Zapper één keer een kaartje
   om te kiezen wie je bent of een profiel toe te voegen. Een toestel krijgt de meldingen van het actieve profiel.
   Eenmalig nodig in Supabase: `supabase/update-profielen.sql` uitvoeren.
+- **Op het beginscherm**: op een gsm vraagt Zapper (na een paar seconden, hoogstens eens per week) om de app op het
+  beginscherm te zetten. Android: één knop. iPhone: de stappen via de deelknop (Apple laat geen knop toe).
 - **Gebruikers**: meerdere mensen loggen in met een link via e-mail. Alleen wie uitgenodigd is, kan erin.
 
 Alles draait gratis: GitHub Pages (website), GitHub Actions (dagelijkse gids en meldingen) en

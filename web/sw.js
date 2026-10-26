@@ -1,5 +1,5 @@
 // Service worker: toont pushmeldingen en houdt de app-schil offline beschikbaar.
-const VERSIE = "tvgids-v16";
+const VERSIE = "tvgids-v18";
 const SCHIL = ["./", "index.html", "app.js", "style.css", "config.js", "themas.json", "icoon-192.png", "favicon-32.png", "logo-woord-licht.png", "logo-woord-donker.png", "manifest.webmanifest"];
 
 self.addEventListener("install", e => {
@@ -10,11 +10,14 @@ self.addEventListener("activate", e => {
 });
 
 // Netwerk eerst (de gids verandert elke dag), cache als terugval.
+// "no-cache": altijd bij de server nagaan of er een nieuwere versie is, ook als de browser het bestand nog bewaarde
+// (GitHub Pages laat bestanden 10 minuten bewaren; anders zie je na een update nog even de oude app).
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
+  const vraag = e.request.mode === "navigate" ? fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }) : fetch(e.request, { cache: "no-cache" });
   e.respondWith(
-    fetch(e.request).then(r => {
+    vraag.then(r => {
       if (r.ok) { const kopie = r.clone(); caches.open(VERSIE).then(c => c.put(e.request, kopie)); }
       return r;
     }).catch(() => caches.match(e.request))
