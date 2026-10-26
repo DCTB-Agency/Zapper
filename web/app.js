@@ -893,6 +893,36 @@ function bewaarIcs(progs, naam) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
   toast(progs.length > 1 ? `${progs.length} programma's klaar voor je agenda` : "Open het bestand om het aan je agenda toe te voegen");
 }
+/* Streaming: een afspraak voor de hele lanceerdag, met een herinnering om 9u die ochtend en de link naar de dienst. */
+const volgendeDag = iso => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+function stAgendaInfo({ id, titel, se, dienst, datum, besch, link }) {
+  return { uid: `${id}-${dienst}-${se || 0}`, datum, link,
+    titel: `${titel}${se ? ` (seizoen ${se})` : ""} op ${dienstNaam(dienst)}`,
+    tekst: [besch, `Vanaf vandaag te zien op ${dienstNaam(dienst)}.`, link, "Via Zapper"].filter(Boolean).join("\n\n") };
+}
+function bewaarStIcs(a) {
+  const r = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//DCTB Agency//Zapper//NL", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VEVENT", `UID:${a.uid}@zapper`, `DTSTAMP:${icsTijd(nu())}`,
+    `DTSTART;VALUE=DATE:${a.datum.replace(/-/g, "")}`, `DTEND;VALUE=DATE:${volgendeDag(a.datum).replace(/-/g, "")}`,
+    `SUMMARY:${icsTekst(a.titel)}`, `DESCRIPTION:${icsTekst(a.tekst)}`, ...(a.link ? [`URL:${a.link}`] : []), "TRANSP:TRANSPARENT",
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsTekst(`Nu te zien: ${a.titel}`)}`, "TRIGGER;RELATED=START:PT9H", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"];
+  const blob = new Blob([r.map(icsVouw).join("\r\n") + "\r\n"], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const el = Object.assign(document.createElement("a"), { href: url, download: `${a.titel.replace(/[^\w\- ]+/g, "").trim() || "zapper"}.ics` });
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  toast("Open het bestand om het aan je agenda toe te voegen");
+}
+const stGoogleAgenda = a => `https://calendar.google.com/calendar/render?${new URLSearchParams({ action: "TEMPLATE", text: a.titel,
+  dates: `${a.datum.replace(/-/g, "")}/${volgendeDag(a.datum).replace(/-/g, "")}`, details: a.tekst })}`;
+function stAgendaKnoppen(a) {
+  G.stAgenda = a; // voor de knop "In mijn agenda"
+  return `<div class="agendaknoppen"><span class="klein">Zet de lanceerdag in je agenda, met een herinnering om 9u:</span>
+    <button class="knop lijn klein" data-stagenda type="button">In mijn agenda</button>
+    <a class="knop lijn klein" href="${esc(stGoogleAgenda(a))}" target="_blank" rel="noopener">Google Agenda</a></div>`;
+}
+
 function googleAgenda(p) {
   const z = G.zMap[p.c];
   const q = new URLSearchParams({ action: "TEMPLATE", text: `${p.t} (${z?.naam})`, dates: `${icsTijd(p.b)}/${icsTijd(p.e)}`, details: agendaTekst(p), location: `${z?.naam}, kanaal ${z?.n}` });
@@ -1047,6 +1077,7 @@ async function toonStZoekDetail(id) {
       <p class="klein">${r.s === "f" ? "Film" : "Reeks"}${r.j ? ` uit ${r.j}` : ""}. ${r.k && r.k > kalDag() ? `Online vanaf ${esc(relDag(r.k).toLowerCase())} op` : "Te zien op"} ${esc(r.d.map(dienstNaam).join(", "))}.</p>
     </div></div>
     <div class="knoppen">${bekijkKnoppen(r.d, r.t, r.w, r.k && r.k > kalDag())}</div>
+    ${r.k && r.k > kalDag() ? stAgendaKnoppen(stAgendaInfo({ id: r.i, titel: r.t, dienst: r.d[0], datum: r.k, link: dienstLink(r.d[0], r.t, r.w) })) : ""}
     ${r.u ? `<p class="bronlink"><a href="https://www.justwatch.com${esc(r.u)}" target="_blank" rel="noopener">Meer info op JustWatch</a></p>` : ""}`;
   if (!$("#detail").open) $("#detail").showModal();
   $("#detail").dataset.k = "";
@@ -1150,7 +1181,8 @@ async function toonStDetail(k) {
       ${bekijkKnoppen(alleDiensten, t.t, t.w, nogNiet)}
       <button class="knop stil" data-stnee="${esc(t.t)}">Niet voor mij</button>
     </div>
-    ${nogNiet ? `<p class="klein">Nog niet te zien: online vanaf ${esc(relDag(it.datum).toLowerCase())}.</p>` : ""}
+    ${nogNiet ? `<p class="klein">Nog niet te zien: online vanaf ${esc(relDag(it.datum).toLowerCase())}.</p>
+      ${stAgendaKnoppen(stAgendaInfo({ id, titel: t.t, se: it.se, dienst, datum: it.datum, besch: t.d, link: dienstLink(dienst, t.t, t.w) }))}` : ""}
     ${t.url ? `<p class="bronlink"><a href="${esc(t.url)}" target="_blank" rel="noopener">Meer info op JustWatch</a></p>` : ""}`;
   if (!$("#detail").open) $("#detail").showModal();
   $("#detail").dataset.k = "";
@@ -1520,9 +1552,10 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-nieuwsweg],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stagenda],[data-nieuwsweg],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.stagenda !== undefined) { if (G.stAgenda) bewaarStIcs(G.stAgenda); return; }
     if (d.nieuwsweg) nieuwsWeg(d.nieuwsweg); // en daarna eventueel de actie van de knop (bv. profiel toevoegen)
     if (d.wissel !== undefined) return wisselProfiel(+d.wissel);
     if (d.wienieuw !== undefined) { S.wieNieuw = true; if (huidig !== "wie") location.hash = "wie"; else tekenWie(); return; }
