@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Zapper">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icoon-192.png">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icoon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +24,7 @@
 <main id="login" class="login" hidden>
   <div class="login-kaart">
     <img src="icoon-192.png" alt="" width="64" height="64">
-    <h1>Zap<span>per</span></h1>
+    <h1 class="login-merk"><picture><source srcset="logo-woord-donker.png" media="(prefers-color-scheme: dark)"><img class="woordmerk" src="logo-woord-licht.png" alt="Zapper" width="194" height="32"></picture></h1>
     <p id="loginUitleg">Log in met je e-mailadres. Je krijgt een link om in te loggen, zonder wachtwoord.</p>
     <div id="googleBlok" hidden>
       <button class="knop google" id="googleKnop" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.8h3.6c2-1.9 3.2-4.7 3.2-8.1Z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1-3.7 1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.9A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.8 14c-.2-.7-.4-1.4-.4-2s.1-1.4.4-2V7.1H2.1A11 11 0 0 0 1 12c0 1.8.4 3.5 1.1 4.9L5.8 14Z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1L5.8 10c.9-2.7 3.3-4.6 6.2-4.6Z"/></svg>Inloggen met Google</button>
@@ -43,7 +44,7 @@
 <div id="app" hidden>
   <header class="kop">
     <div class="kop-in">
-      <a href="#vanavond" class="merk">Zap<span>per</span></a>
+      <a href="#vanavond" class="merk" aria-label="Zapper, naar Vanavond"><img class="merk-icoon" src="icoon-192.png" alt="" width="32" height="32"><picture><source srcset="logo-woord-donker.png" media="(prefers-color-scheme: dark)"><img class="woordmerk" src="logo-woord-licht.png" alt="Zapper" width="194" height="32"></picture></a>
       <nav class="tabs" id="tabs" aria-label="Onderdelen">
         <a href="#vanavond" data-tab="vanavond">Vanavond</a>
         <a href="#gids" data-tab="gids">Gids</a>

@@ -45,8 +45,9 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
 - **Meldingen**: elke dag op een uur naar keuze een pushmelding op Android of iPhone met wat er
   vanavond op je kijklijst staat, aangevuld met tips.
 - **Profielen**: op één login kunnen meerdere mensen een eigen profiel hebben (zoals bij Netflix), elk met eigen
-  vragenlijst, tips, kijklijst en meldingen. Bij het openen kies je **Wie kijkt er?**; wisselen, toevoegen en verwijderen
-  doe je in je profiel. Een toestel krijgt de meldingen van het profiel dat er actief is.
+  vragenlijst, tips, kijklijst en meldingen. Wisselen, toevoegen en verwijderen
+  doe je in je profiel. Elk toestel onthoudt welk profiel er actief is; na de update toont Zapper één keer een kaartje
+  om te kiezen wie je bent of een profiel toe te voegen. Een toestel krijgt de meldingen van het actieve profiel.
   Eenmalig nodig in Supabase: `supabase/update-profielen.sql` uitvoeren.
 - **Gebruikers**: meerdere mensen loggen in met een link via e-mail. Alleen wie uitgenodigd is, kan erin.
 
@@ -58,7 +59,7 @@ gids.py                 haalt de Telenet-gids op naar web/data/ (draait in GitHu
 streaming.py            haalt nieuw, binnenkort en populair op streamingdiensten op (JustWatch)
 melding.py              stuurt de dagelijkse pushmeldingen (draait in GitHub Actions)
 maak_vapid.py           maakt eenmalig de sleutels voor pushmeldingen
-maak_icoon.py           tekent de app-iconen
+maak_icoon.py           maakt app-iconen en het woordmerk uit merk/zapper-logo-bron.webp (pip3 install pillow)
 supabase/schema.sql     database: profielen, kijklijst, toestellen
 supabase/update-*.sql   kleine updates voor een database die al bestond
 web/                    de web-app (statisch, geen build-stap)

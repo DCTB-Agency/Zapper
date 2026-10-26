@@ -415,8 +415,10 @@ function item(p, { metDag = false, markeer = null, voortgang = false, volgende =
 /* ---------- Nieuws: na een update één keer uitleggen wat er nieuw is (per toestel onthouden) ---------- */
 const NIEUWS = [
   { id: "profielen-2026-10", titel: "Nieuw: een profiel voor iedereen",
-    tekst: "Kijk je samen met anderen? Maak voor elke persoon een eigen profiel, met eigen tips, kijklijst en meldingen. Bij het openen kies je wie er kijkt.",
-    knop: "Profiel toevoegen", actie: "data-wienieuw", toon: () => OP.profielen_ok }
+    tekst: () => S.profielen.length > 1
+      ? "Op deze login staan nu meerdere profielen, elk met eigen tips, kijklijst en meldingen. Wie ben jij op dit toestel? Zapper onthoudt je keuze; wisselen kan later in je profiel."
+      : "Kijk je samen met anderen? Voeg extra profielen toe, elk met eigen tips, kijklijst en meldingen. Wisselen kan altijd in je profiel.",
+    kies: () => S.profielen.length > 1, knop: "Profiel toevoegen", actie: "data-wienieuw", toon: () => OP.profielen_ok }
 ];
 const nieuwsGezien = () => { try { return JSON.parse(localStorage.getItem("avondgids.nieuws")) || []; } catch (_) { return []; } };
 function nieuwsWeg(id) { try { localStorage.setItem("avondgids.nieuws", JSON.stringify([...nieuwsGezien(), id])); } catch (_) {} $("#nieuwsKaart").hidden = true; }
@@ -424,7 +426,10 @@ function tekenNieuws() {
   const n = NIEUWS.find(x => !nieuwsGezien().includes(x.id) && (!x.toon || x.toon()));
   $("#nieuwsKaart").hidden = !n;
   if (!n) return;
-  $("#nieuwsKaart").innerHTML = `<div><span class="eyebrow">Update</span><h2>${esc(n.titel)}</h2><p>${esc(n.tekst)}</p></div>
+  const tekst = typeof n.tekst === "function" ? n.tekst() : n.tekst;
+  $("#nieuwsKaart").innerHTML = `<div><span class="eyebrow">Update</span><h2>${esc(n.titel)}</h2><p>${esc(tekst)}</p></div>
+    ${n.kies?.() ? `<div class="wie-tegels klein">${S.profielen.map(pr => `<button class="wie-tegel" data-wissel="${pr.profiel}" data-nieuwsweg="${n.id}" aria-current="${pr.profiel === OP.nr}">
+      <span class="wie-rond" style="background:${profielKleur(pr.profiel)}">${esc(profielLetter(pr))}</span><b>${esc(pr.naam || "Zonder naam")}</b></button>`).join("")}</div>` : ""}
     <div class="knoppen"><button class="knop" ${n.actie} data-nieuwsweg="${n.id}" type="button">${esc(n.knop)}</button>
     <button class="knop stil" data-nieuwsweg="${n.id}" type="button">Begrepen</button></div>`;
 }
@@ -1644,7 +1649,6 @@ function tekenWie() {
   if (nieuw) { $("#wieNaam").focus(); $("#wieForm").addEventListener("submit", e => { e.preventDefault(); maakProfiel($("#wieNaam").value.trim()); }); }
 }
 async function wisselProfiel(nr) {
-  try { sessionStorage.setItem("avondgids.gekozen", "1"); } catch (_) {}
   if (nr === OP.nr && S.profiel) { location.hash = "vanavond"; return; }
   OP.kies(nr);
   try { [S.profiel, S.kijk] = await Promise.all([OP.profiel(), OP.kijklijst()]); }
@@ -1694,9 +1698,8 @@ async function startApp(opslag) {
   $("#klok").textContent = tijd(nu());
   await laadDag(vandaag());
   ruimKijklijstOp();
-  let gekozen = false; try { gekozen = !!sessionStorage.getItem("avondgids.gekozen"); } catch (_) {}
-  if (S.profielen.length > 1 && !gekozen) location.hash = "wie"; // gedeeld toestel: eerst kiezen wie er kijkt
-  else if (!S.profiel.onboarding_klaar && !heeftInteresses()) location.hash = "welkom";
+  // Geen keuzescherm bij elke opstart: het toestel onthoudt het profiel. Kiezen kan via het kaartje (eenmalig) of je profiel.
+  if (!S.profiel.onboarding_klaar && !heeftInteresses()) location.hash = "welkom";
   else if (location.hash.startsWith("#welkom") || location.hash.startsWith("#wie")) location.hash = "vanavond"; // bv. een oude bladwijzer of herstelde tab
   koppel();
   route();

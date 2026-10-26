@@ -61,11 +61,11 @@ meldingen via web-push vanuit de PWA.
 - Meerdere profielen per login: kolom `profiel` (smallint, 0 = hoofdprofiel) in `profielen` (PK user_id+profiel),
   `kijklijst`, `push_abonnementen`, `meldingen_log` (PK user_id+profiel+dag); RPC `registreer_toestel(..., p_profiel)`.
   Zie `supabase/update-profielen.sql`. `SupaOpslag.profielen_ok` = de kolom bestaat; zo niet werkt alles als één profiel.
-  Actief profiel per toestel in localStorage (`avondgids.actiefprofiel.<uid>`); scherm `#wie` bij opstarten als er
-  meer dan één profiel is (eens per sessie). `melding.py` stuurt per (user_id, profiel) naar de toestellen van dat profiel.
+  Actief profiel per toestel in localStorage (`avondgids.actiefprofiel.<uid>`); geen keuzescherm bij opstarten,
+  wel één keer het nieuwskaartje (met profielkeuze als er meerdere zijn). `#wie` alleen via "Profiel toevoegen". `melding.py` stuurt per (user_id, profiel) naar de toestellen van dat profiel.
 - Nieuws na een update: lijst `NIEUWS` in `app.js` (id, titel, tekst, knop, actie, toon). Eén kaart bovenaan Vanavond,
   per toestel onthouden in localStorage `avondgids.nieuws`. Voor een volgende aankondiging: een item met een nieuwe id toevoegen.
-- iOS (web-app op beginscherm): `body` minstens `100lvh` en `.onderbalk::after` als vangnet, anders staat het menu op korte pagina's te hoog.
+- iOS 26 (web-app op beginscherm, WebKit-bug 301108): `@media (display-mode: standalone) { html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))) } }`, anders staat het menu op korte pagina's te hoog. Niet op `body` zetten.
 - Weghalen altijd via `bevestig()` (eigen `<dialog id="bevestig">`), ook voor Niet voor mij en Vergeet.
 - Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
   per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).
@@ -74,6 +74,11 @@ meldingen via web-push vanuit de PWA.
   **De scorefunctie staat dubbel**: `score()` in `web/app.js` en `score()` in `melding.py`. Pas ze samen aan.
 
 ## Ontwerp (web/style.css)
+
+- Merk: icoon en woordmerk uit `merk/zapper-logo-bron.webp` via `maak_icoon.py` (Pillow). Woordmerk in twee versies
+  (`logo-woord-licht.png` met donkere PER, `logo-woord-donker.png` met witte PER) via `<picture>` en prefers-color-scheme.
+  Merkkleuren `--merk-1`/`--merk-2` en verloop `--merk`: primaire knoppen, lijn onder de kop, streepje voor kopjes,
+  actief tabblad, voortgangsbalk, profielknop.
 
 - **Mobile first**: de basisregels zijn voor de gsm; `@media (min-width: 720px)` voegt tabs, rasters en
   twee kolommen toe, `1080px` alleen een grotere titel. Schrijf nieuwe stijl eerst voor de gsm.
