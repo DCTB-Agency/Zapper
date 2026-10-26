@@ -824,6 +824,9 @@ function tekenProfiel() {
     ${lc.length ? `<div><h3>Zenders die vaker opduiken</h3><div class="pillen">${lc.map(([c]) => `<span class="pil">${esc(G.zMap[c]?.naam || c)}</span>`).join("")}</div></div>` : ""}
     ${L.nee?.length ? `<p class="klein">${L.nee.length} programma's krijg je niet meer als tip.</p>` : ""}
     <button class="knop stil klein" data-vergeet type="button">Vergeet wat de gids leerde</button>`;
+  $("#pInstallKnop").hidden = isStandalone;
+  $("#pInstallTekst").textContent = isStandalone ? "Zapper staat al op je beginscherm. Je gebruikt hem nu als app."
+    : "Zet Zapper op het beginscherm van je gsm: dan open je hem met één tik, schermvullend zoals een gewone app.";
   $("#pMeldAan").checked = p.melding_aan;
   $("#pMeldTips").checked = p.tips_in_melding;
   $("#pMeldUur").innerHTML = Array.from({ length: 8 }, (_, i) => i + 14).map(u => `<option value="${u}"${u === p.melding_uur ? " selected" : ""}>${u}:00</option>`).join("");
@@ -1693,6 +1696,7 @@ function koppel() {
   $("#pMeldTips").addEventListener("change", e => { S.profiel.tips_in_melding = e.target.checked; bewaarProfiel(); });
   $("#pMeldUur").addEventListener("change", e => { S.profiel.melding_uur = +e.target.value; bewaarProfiel(); pushStatus(); });
   $("#pushKnop").addEventListener("click", pushKnop);
+  $("#pInstallKnop").addEventListener("click", () => vraagInstallatie(true));
   progZoeker($("#kProgZoek"), $("#kProgSug"), "kijk");
   $("#obVolgende").addEventListener("click", obVolgende);
   $("#obTerug").addEventListener("click", obTerug);
