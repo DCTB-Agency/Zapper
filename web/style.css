@@ -191,6 +191,11 @@ span.pil { cursor: default; }
 /* ---------- App-schil ---------- */
 /* De kop loopt door tot helemaal bovenaan (onder de klok), ondoorzichtig. Zo legt iOS 26 in de web-app op het
    beginscherm zijn vervagend randeffect er niet overheen: dat slaat het over bij een volle, vaste balk aan de rand. */
+.statusstrook { display: none; }
+@media (display-mode: standalone) {
+  .statusstrook { display: block; position: fixed; top: 0; left: 0; right: 0; height: max(12px, env(safe-area-inset-top, 0px)); background: var(--bg); z-index: 30; }
+}
+html[data-standalone] .statusstrook { display: block; position: fixed; top: 0; left: 0; right: 0; height: max(12px, env(safe-area-inset-top, 0px)); background: var(--bg); z-index: 30; }
 .kop { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
 .kop::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--merk); opacity: .85; }
 .kop-in { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; gap: var(--s5); min-height: var(--kop-h); padding: 0 var(--gutter-r) 0 var(--gutter-l); }

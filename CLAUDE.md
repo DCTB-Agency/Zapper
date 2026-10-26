@@ -66,12 +66,14 @@ meldingen via web-push vanuit de PWA.
 - Nieuws na een update: lijst `NIEUWS` in `app.js` (id, titel, tekst, knop, actie, toon). Eén kaart bovenaan Vanavond,
   per toestel onthouden in localStorage `avondgids.nieuws`. Voor een volgende aankondiging: een item met een nieuwe id toevoegen.
 - iOS 26 (web-app op beginscherm, WebKit-bug 301108): `@media (display-mode: standalone) { html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))) } }`, anders staat het menu op korte pagina's te hoog. Niet op `body` zetten.
-- Kop: sticky `top: 0` met `padding-top: env(safe-area-inset-top)` en ondoorzichtig, zodat iOS 26 zijn vervagend randeffect
-  (Liquid Glass) er niet over legt in de web-app. Zoekknop `#kopZoek` verschijnt via `body.gescrold` (scrollY > 140).
+- Kop: sticky `top: 0` met `padding-top: env(safe-area-inset-top)` en ondoorzichtig. Tegen het vervagend randeffect van
+  iOS 26 (Liquid Glass) in de web-app: `.statusstrook`, een vaste ondoorzichtige strook bovenaan (min. 12px, alleen
+  standalone; `html[data-standalone]` via navigator.standalone). Een sticky kop telt pas mee als hij "vastzit" (na scrollen).
+  Nog niet bevestigd op een iPhone; anders: de kop ~30pt lager zetten in standalone. Zoekknop `#kopZoek` verschijnt via `body.gescrold` (scrollY > 140).
 - Updates: sw.js haalt bestanden met `cache: "no-cache"`; app herlaadt één keer bij `controllerchange` (alleen als er al
   een service worker was). Verhoog `VERSIE` in sw.js bij elke wijziging in web/.
 - Installeren: `<dialog id="installeer">`; Android via `beforeinstallprompt`, iOS met stappen. Alleen op gsm, niet in
-  standalone; "Nu niet" = 7 dagen (`avondgids.installlater`).
+  standalone, ook al op het inlogscherm (iOS deelt de login niet tussen Safari en de web-app); "Nu niet" = 7 dagen.
 - Weghalen altijd via `bevestig()` (eigen `<dialog id="bevestig">`), ook voor Niet voor mij en Vergeet.
 - Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
   per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).

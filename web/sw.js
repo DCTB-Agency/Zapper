@@ -1,5 +1,5 @@
 // Service worker: toont pushmeldingen en houdt de app-schil offline beschikbaar.
-const VERSIE = "tvgids-v18";
+const VERSIE = "tvgids-v20";
 const SCHIL = ["./", "index.html", "app.js", "style.css", "config.js", "themas.json", "icoon-192.png", "favicon-32.png", "logo-woord-licht.png", "logo-woord-donker.png", "manifest.webmanifest"];
 
 self.addEventListener("install", e => {

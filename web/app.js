@@ -1699,7 +1699,7 @@ function installStappen() {
   return `<ol class="stappen"><li>Tik in je browser op het menu <b>⋮</b> rechtsboven.</li><li>Kies <b>App installeren</b> of <b>Toevoegen aan startscherm</b>.</li></ol>`;
 }
 function vraagInstallatie(altijd = false) {
-  if (isStandalone || OP?.demo && !altijd) return;
+  if (isStandalone || (OP?.demo && !altijd)) return;
   if (!altijd) {
     if (!isMobiel) return;
     try {
@@ -1711,7 +1711,10 @@ function vraagInstallatie(altijd = false) {
   $("#installeerJa").hidden = !installGebeurtenis;
   if (!$("#installeer").open) $("#installeer").showModal();
 }
+let installGekoppeld = false;
 function koppelInstallatie() {
+  if (installGekoppeld) return;
+  installGekoppeld = true;
   for (const b of $$("[data-installnee]")) b.addEventListener("click", () => {
     try { localStorage.setItem("avondgids.installlater", Date.now()); } catch (_) {}
     $("#installeer").close();
@@ -1725,7 +1728,8 @@ function koppelInstallatie() {
     if (outcome === "accepted") toast("Zapper staat op je beginscherm");
   });
   // Even wachten zodat de app eerst zichtbaar is; niet tijdens de vragenlijst.
-  setTimeout(() => { if (huidig !== "welkom" && huidig !== "wie" && !$("#detail").open && !$("#bevestig").open) vraagInstallatie(); }, 4000);
+  // Ook al op het inlogscherm: op iPhone deelt de app op het beginscherm de login niet met Safari.
+  setTimeout(() => { if (!$("#app").hidden && (huidig === "welkom" || huidig === "wie")) return; if (!$("#detail").open && !$("#bevestig").open) vraagInstallatie(); }, 4000);
 }
 
 /* ---------- Opstarten ---------- */
@@ -1760,6 +1764,7 @@ async function startApp(opslag) {
 
 function toonLogin(sb) {
   $("#login").hidden = false; $("#app").hidden = true;
+  koppelInstallatie();
   // De Google-knop verschijnt pas als Google aan staat in Supabase (Authentication > Providers).
   fetch(CFG.SUPABASE_URL + "/auth/v1/settings", { headers: { apikey: CFG.SUPABASE_ANON_KEY } })
     .then(r => r.json()).then(st => {

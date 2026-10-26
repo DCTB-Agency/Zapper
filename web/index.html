@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Zapper">
 <link rel="manifest" href="manifest.webmanifest">
+<script>if (navigator.standalone) document.documentElement.dataset.standalone = "";</script>
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="icoon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -19,6 +20,9 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- Vaste, ondoorzichtige strook onder de klok (alleen in de web-app op het beginscherm): iOS 26 legt dan zijn
+     vervagend randeffect niet over de kop. Zie CLAUDE.md. -->
+<div class="statusstrook" aria-hidden="true"></div>
 
 <!-- Inloggen -->
 <main id="login" class="login" hidden>
