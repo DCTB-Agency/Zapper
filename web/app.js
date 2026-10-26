@@ -1795,6 +1795,13 @@ function vraagInstallatie(altijd = false) {
   $("#installeerJa").hidden = !installGebeurtenis;
   if (!$("#installeer").open) $("#installeer").showModal();
 }
+/* Eén extra keer vragen, ook als iemand eerder "Nu niet" koos. Daarna geldt weer de gewone regel (hoogstens eens per week). */
+const eenmaligGevraagd = () => { try { return !!localStorage.getItem("avondgids.installeenmalig"); } catch (_) { return true; } };
+function eenmaligeVraag() {
+  if (isStandalone || !isMobiel || OP?.demo || eenmaligGevraagd()) return;
+  try { if (localStorage.getItem("avondgids.geinstalleerd")) return; localStorage.setItem("avondgids.installeenmalig", Date.now()); } catch (_) { return; }
+  vraagInstallatie(true);
+}
 let installGekoppeld = false;
 function koppelInstallatie() {
   if (installGekoppeld) return;
@@ -1813,7 +1820,12 @@ function koppelInstallatie() {
   });
   // Even wachten zodat de app eerst zichtbaar is; niet tijdens de vragenlijst.
   // Ook al op het inlogscherm: op iPhone deelt de app op het beginscherm de login niet met Safari.
-  setTimeout(() => { if (!$("#app").hidden && (huidig === "welkom" || huidig === "wie")) return; if (!$("#detail").open && !$("#bevestig").open) vraagInstallatie(); }, 4000);
+  const rustig = () => !($("#app").hidden === false && (huidig === "welkom" || huidig === "wie")) && !$("#detail").open && !$("#bevestig").open && !$("#installeer").open;
+  setTimeout(() => { if (rustig()) { if (!eenmaligGevraagd()) eenmaligeVraag(); else vraagInstallatie(); } }, 4000);
+  // Kom je terug naar de app (ander tabblad of app weggeklikt), zonder te herladen of opnieuw in te loggen: één keer nog eens vragen.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") setTimeout(() => { if (rustig()) eenmaligeVraag(); }, 1500);
+  });
 }
 
 /* ---------- Opstarten ---------- */
