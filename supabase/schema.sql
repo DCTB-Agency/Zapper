@@ -117,3 +117,8 @@ returns void language sql security definer set search_path = public as $$
 $$;
 revoke all on function public.registreer_toestel(text, text, text, text, smallint) from public, anon;
 grant execute on function public.registreer_toestel(text, text, text, text, smallint) to authenticated;
+
+-- ---------- Streamingtitels op de kijklijst (zelfde als update-streaming-kijklijst.sql) ----------
+alter table public.kijklijst add column if not exists ref text;
+alter table public.kijklijst drop constraint if exists kijklijst_soort_check;
+alter table public.kijklijst add constraint kijklijst_soort_check check (soort in ('uitzending', 'reeks', 'streaming'));

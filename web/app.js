@@ -752,7 +752,27 @@ async function tekenSnelZoek() {
 
 /* ---------- Kijklijst ---------- */
 const komendeKijklijst = () => alleProgs().filter(p => p.e > nu() && opKijklijst(p)).sort((a, b) => a.b - b.b);
+/* Streamingtitels op de kijklijst: eerst wat binnenkort uitkomt (op datum), dan wat al te zien is. */
+async function tekenStKijk() {
+  const l = S.kijk.filter(k => k.soort === "streaming");
+  $("#blokStKijk").hidden = !l.length;
+  if (!l.length) return;
+  const reg = await laadStZoek().catch(() => []), perId = new Map(reg.map(r => [r.i, r]));
+  const datum = k => (k.start ? tsKal(+k.start) : "");
+  l.sort((a, b) => (datum(a) > kalDag() ? 0 : 1) - (datum(b) > kalDag() ? 0 : 1) || datum(a).localeCompare(datum(b)) || a.titel.localeCompare(b.titel));
+  $("#stKijkLijst").innerHTML = l.map(k => {
+    const r = perId.get(k.ref), d = datum(k);
+    return `<div class="stkaart" role="button" tabindex="0" data-stz="${esc(k.ref)}">
+      <span class="poster">${r?.p ? `<img src="https://images.justwatch.com${esc(r.p)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="pt">${esc(k.titel)}</span></span>
+      <span class="tekst"><span class="titel">${esc(k.titel)}</span>
+        <span class="chips">${beschikbaarChip(d && d > kalDag() ? d : null)}</span>
+        <span class="m">${esc(dienstNaam(k.zender))}${r?.j ? ` · ${r.j}` : ""}</span></span>
+    </div>`;
+  }).join("");
+}
+
 async function tekenKijklijst() {
+  tekenStKijk();
   const rs = S.kijk.filter(k => k.soort === "reeks");
   $("#reeksen").innerHTML = rs.map(k => `<button class="pil" data-ontvolg="${esc(k.titel)}" aria-label="${esc(k.titel)} uit favorieten">${esc(k.titel)} <span class="x">×</span></button>`).join("")
     || `<p class="klein">Nog geen favoriete programma's. Zoek er hierboven een, of open een programma en tik op <b>☆ Favoriet programma</b>.</p>`;
@@ -983,8 +1003,38 @@ function bekijkKnoppen(diensten, titel, w, nogNiet) {
   const mijn = S.profiel.streaming || [];
   return [...new Set(diensten)].sort((a, b) => mijn.includes(b) - mijn.includes(a)).map((code, i) => {
     const url = dienstLink(code, titel, w); if (!url) return "";
-    return `<a class="knop${i ? " lijn" : ""}" href="${esc(url)}" target="_blank" rel="noopener">${nogNiet ? "Naar" : "Bekijk op"} ${esc(dienstNaam(code))}</a>`;
+    return `<a class="knop vol${i ? " lijn" : ""}" href="${esc(url)}" target="_blank" rel="noopener">${nogNiet ? "Naar" : "Kijk op"} ${esc(dienstNaam(code))}</a>`;
   }).join("");
+}
+/* Streamingtitels op de kijklijst: soort "streaming", zender = dienstcode, start = lanceerdag (of leeg), ref = JustWatch-id. */
+const stOpKijklijst = ref => S.kijk.find(k => k.soort === "streaming" && k.ref === ref);
+const kalTs = iso => Math.floor(Date.parse(iso + "T12:00:00Z") / 1000);
+const tsKal = ts => new Date(ts * 1000).toISOString().slice(0, 10);
+/* Knoppen onderaan het streamingdetail: Kijk op … over de volle breedte, daaronder Niet voor mij en Op kijklijst naast elkaar. */
+function stKnoppen({ ref, titel, diensten, w, datum, se }) {
+  const nogNiet = !!datum && datum > kalDag(), op = stOpKijklijst(ref);
+  G.stKijk = { ref, titel: titel + (se ? ` (seizoen ${se})` : ""), dienst: diensten[0], datum: nogNiet ? datum : null };
+  return `<div class="stknoppen">${bekijkKnoppen(diensten, titel, w, nogNiet)}
+    <button class="knop stil" data-stnee="${esc(titel)}" type="button">Niet voor mij</button>
+    <button class="knop ${op ? "aan" : "lijn"}" data-stkijk type="button">${op ? "✓ Op kijklijst" : "+ Op kijklijst"}</button></div>`;
+}
+async function wisselStKijk() {
+  const info = G.stKijk; if (!info) return;
+  const bestaand = stOpKijklijst(info.ref);
+  if (bestaand && !await bevestig(`${bestaand.titel} van je kijklijst halen?`, "Van kijklijst halen")) return;
+  try {
+    if (bestaand) { await OP.verwijder(bestaand.id); S.kijk = S.kijk.filter(k => k !== bestaand); toast("Van je kijklijst gehaald"); }
+    else {
+      S.kijk.push(await OP.voegToe({ soort: "streaming", titel: info.titel, zender: info.dienst, start: info.datum ? kalTs(info.datum) : null, ref: info.ref }));
+      toast(info.datum ? `Op je kijklijst: je ziet hem vanaf ${relDag(info.datum).toLowerCase()}` : "Op je kijklijst gezet");
+    }
+  } catch (e) {
+    toast(/ref|soort_check|violates check/i.test(e.message) ? "Dit kan pas als de beheerder supabase/update-streaming-kijklijst.sql uitvoerde." : "Bewaren lukte niet: " + e.message);
+    return;
+  }
+  const knop = $("#detailIn [data-stkijk]");
+  if (knop) { const op = stOpKijklijst(info.ref); knop.className = `knop ${op ? "aan" : "lijn"}`; knop.textContent = op ? "✓ Op kijklijst" : "+ Op kijklijst"; }
+  if (huidig === "kijklijst") tekenKijklijst();
 }
 const beschikbaarChip = datum => datum && datum > kalDag()
   ? `<span class="chip straks">Vanaf ${esc(relDag(datum).toLowerCase())}</span>` : `<span class="chip nu">Nu te zien</span>`;
@@ -1069,14 +1119,17 @@ async function toonStZoekDetail(id) {
   const D = await laadStreaming().catch(() => null);
   const it = D?.titels[id] && D.items.find(x => x.id === id);
   if (it) return toonStDetail(stSleutel(it));
-  const r = (await laadStZoek()).find(x => x.i === id); if (!r) return;
+  let r = (await laadStZoek()).find(x => x.i === id);
+  const k = stOpKijklijst(id);
+  if (!r && k) r = { i: id, t: k.titel, s: "r", d: [k.zender], w: {}, k: k.start ? tsKal(+k.start) : null };
+  if (!r) return;
   $("#detailIn").innerHTML = `
     <div class="kopje"><span><b>${esc(r.d.map(dienstNaam).join(", "))}</b></span><button class="sluit" data-sluit>Sluiten</button></div>
     <div class="stdetail">${r.p ? `<img src="https://images.justwatch.com${esc(r.p)}" alt="" onerror="this.remove()">` : ""}<div>
       <h3>${esc(r.t)}</h3>
       <p class="klein">${r.s === "f" ? "Film" : "Reeks"}${r.j ? ` uit ${r.j}` : ""}. ${r.k && r.k > kalDag() ? `Online vanaf ${esc(relDag(r.k).toLowerCase())} op` : "Te zien op"} ${esc(r.d.map(dienstNaam).join(", "))}.</p>
     </div></div>
-    <div class="knoppen">${bekijkKnoppen(r.d, r.t, r.w, r.k && r.k > kalDag())}</div>
+    ${stKnoppen({ ref: r.i, titel: r.t, diensten: r.d, w: r.w, datum: r.k })}
     ${r.k && r.k > kalDag() ? stAgendaKnoppen(stAgendaInfo({ id: r.i, titel: r.t, dienst: r.d[0], datum: r.k, link: dienstLink(r.d[0], r.t, r.w) })) : ""}
     ${r.u ? `<p class="bronlink"><a href="https://www.justwatch.com${esc(r.u)}" target="_blank" rel="noopener">Meer info op JustWatch</a></p>` : ""}`;
   if (!$("#detail").open) $("#detail").showModal();
@@ -1177,10 +1230,7 @@ async function toonStDetail(k) {
       ${andere.length ? `<p class="klein">Ook op ${esc(andere.join(", "))}</p>` : ""}
     </div></div>
     <div class="feiten">${feiten.map(f => `<span>${esc(f)}</span>`).join("")}</div>
-    <div class="knoppen">
-      ${bekijkKnoppen(alleDiensten, t.t, t.w, nogNiet)}
-      <button class="knop stil" data-stnee="${esc(t.t)}">Niet voor mij</button>
-    </div>
+    ${stKnoppen({ ref: id, titel: t.t, diensten: [...new Set(alleDiensten)], w: t.w, datum: it.soort === "binnenkort" ? it.datum : null, se: it.se })}
     ${nogNiet ? `<p class="klein">Nog niet te zien: online vanaf ${esc(relDag(it.datum).toLowerCase())}.</p>
       ${stAgendaKnoppen(stAgendaInfo({ id, titel: t.t, se: it.se, dienst, datum: it.datum, besch: t.d, link: dienstLink(dienst, t.t, t.w) }))}` : ""}
     ${t.url ? `<p class="bronlink"><a href="${esc(t.url)}" target="_blank" rel="noopener">Meer info op JustWatch</a></p>` : ""}`;
@@ -1552,9 +1602,10 @@ function herteken() {
 function koppel() {
   window.addEventListener("hashchange", route);
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stagenda],[data-nieuwsweg],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
+    const t = e.target.closest("[data-kijk],[data-volg],[data-fav],[data-zender],[data-gdag],[data-zdag],[data-groep],[data-voorbeeld],[data-ontvolg],[data-thema],[data-woordweg],[data-favknop],[data-sluit],[data-obkeuze],[data-obfav],[data-taal],[data-nee],[data-vergeet],[data-allezoek],[data-alzend],[data-progkies],[data-obprogweg],[data-agenda],[data-agendaalles],[data-meerzend],[data-stkijk],[data-stagenda],[data-nieuwsweg],[data-wissel],[data-wienieuw],[data-profielweg],[data-stdienst],[data-stmodus],[data-stmeer],[data-stzoekmeer],[data-stz],[data-st],[data-stnee],[data-dienst],[data-p]");
     if (!t) return;
     const d = t.dataset;
+    if (d.stkijk !== undefined) return wisselStKijk();
     if (d.stagenda !== undefined) { if (G.stAgenda) bewaarStIcs(G.stAgenda); return; }
     if (d.nieuwsweg) nieuwsWeg(d.nieuwsweg); // en daarna eventueel de actie van de knop (bv. profiel toevoegen)
     if (d.wissel !== undefined) return wisselProfiel(+d.wissel);

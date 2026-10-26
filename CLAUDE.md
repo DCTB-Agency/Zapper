@@ -74,6 +74,9 @@ meldingen via web-push vanuit de PWA.
   een service worker was). Verhoog `VERSIE` in sw.js bij elke wijziging in web/.
 - Installeren: `<dialog id="installeer">`; Android via `beforeinstallprompt`, iOS met stappen. Alleen op gsm, niet in
   standalone, ook al op het inlogscherm (iOS deelt de login niet tussen Safari en de web-app); "Nu niet" = 7 dagen.
+- Streaming op de kijklijst: kijklijst-rij `soort = 'streaming'`, `zender` = dienstcode, `start` = lanceerdag (12u UTC,
+  of null), `ref` = JustWatch-id (`supabase/update-streaming-kijklijst.sql`). `stKnoppen()` / `wisselStKijk()` / `tekenStKijk()`
+  in app.js; `melding.py` meldt "Vandaag uit" voor zulke rijen met start = vandaag.
 - Weghalen altijd via `bevestig()` (eigen `<dialog id="bevestig">`), ook voor Niet voor mij en Vergeet.
 - Tips op Vanavond: `tipsPerSlot()` groepeert per halfuur, max. 4 per slot, elk van een andere zender, max. 4 per zender
   per avond. `tipsVoor()` blijft voor de onboarding-voorproef. `melding.py` gebruikt nog de oude selectie (3 tips).

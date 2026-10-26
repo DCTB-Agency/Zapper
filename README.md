@@ -28,6 +28,9 @@ Antwerpen, vandaag + 7 dagen) en er een persoonlijke avondgids van maakt.
   Twee luiken: **Nu te zien** (vandaag nieuw, eerder nieuw, populair) en **Binnenkort** (per dag waarop het online komt).
   Elke titel toont *Nu te zien* of *Vanaf …*. De knop **Bekijk op Netflix** (of een andere dienst) opent de titel
   rechtstreeks op die dienst; JustWatch staat er nog als kleine link onder.
+  In het detail: **Kijk op …** over de volle breedte, daaronder **Niet voor mij** en **Op kijklijst**. Streamingtitels
+  staan op de Kijklijst in het blok *Op streaming*; komt er een uit, dan staat dat die dag in je melding.
+  Eenmalig nodig in Supabase: `supabase/update-streaming-kijklijst.sql`.
   Komt iets binnenkort uit, dan zet **In mijn agenda** of **Google Agenda** de lanceerdag in je agenda (hele dag,
   herinnering om 9u, met de link naar de dienst).
   Met het **zoekveld** vind je ook oudere films en reeksen (de ~4.000 populairste titels van alle diensten, typfouten mogen),

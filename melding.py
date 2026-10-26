@@ -192,6 +192,12 @@ def melding_voor(profiel, kijklijst, progs, themas, zenders, nu, stream=None):
                 break
 
     st = streaming_regel(profiel, stream, nu.date().isoformat())
+    # Streamingtitels op de kijklijst die vandaag uitkomen gaan voor.
+    namen = {d["id"]: d["naam"] for d in (stream or {}).get("diensten", [])}
+    uit_vandaag = [k for k in kijklijst if k["soort"] == "streaming" and k.get("start")
+                   and dt.datetime.fromtimestamp(int(k["start"]), TZ).date() == nu.date()]
+    if uit_vandaag:
+        st = "Vandaag uit: " + ", ".join(f"{k['titel']} ({namen.get(k.get('zender'), k.get('zender'))}) ★" for k in uit_vandaag[:3])
     if not regels and not st:
         return None
     if not regels:
